@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto, { hash } from "crypto";
 import { NODE_TYPE } from "../constants";
 import { IGetPagesParams } from "../types";
 import { fetchGetWithRetry, fetchPostWithRetry } from "../util/fetchData";
@@ -100,7 +100,13 @@ export const getPages = async ({
 
             const title =
               page.properties?.[`이름`]?.title?.[0]?.plain_text || `Unnamed`;
-            const slug = slugify(title);
+            const slug = slugify(
+              page.properties?.[`slug`]?.rich_text?.plain_text ||
+                crypto
+                  .createHash(`md5`)
+                  .update(JSON.stringify(title))
+                  .digest(`hex`)
+            );
 
             if (!title) {
               reporter.warn(
