@@ -17,7 +17,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
      * @param databaseId 데이터베이스 아이디
      * @param parentCategoryId 부모 데이터베이스 아이디
      */
-    const processDatabase = async (databaseId, parentCategoryId = null) => {
+    const processDatabase = async (databaseId, parentCategoryId = null, categoryPath = []) => {
         try {
             while (hasMore) {
                 const databaseUrl = `databases/${databaseId}/query`;
@@ -42,7 +42,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                         const categoryNode = {
                             id: nodeId,
                             category_name: title,
-                            parent_id: parentCategoryId,
+                            parent: parentCategoryId,
                             slug: slug || `no-title-${categoryJsonData.id}`,
                             children: [],
                             internal: {
@@ -67,12 +67,17 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                                 reporter.warn(`[WARNING] Parent node not found for ID: ${parentCategoryId}`);
                             }
                         }
-                        await processDatabase(categoryJsonData.id, nodeId);
+                        const newCategoryPath = [...categoryPath, categoryNode];
+                        await processDatabase(categoryJsonData.id, nodeId, newCategoryPath);
                     }
                     else {
                         // 페이지인 경우
                         const title = page.properties?.[`이름`]?.title?.[0]?.plain_text || `Unnamed`;
-                        const slug = (0, slugify_1.slugify)(title);
+                        const slug = (0, slugify_1.slugify)(page.properties?.[`slug`]?.rich_text?.[0]?.plain_text ||
+                            crypto_1.default
+                                .createHash(`md5`)
+                                .update(JSON.stringify(title))
+                                .digest(`hex`));
                         if (!title) {
                             reporter.warn(`[WARNING] Category without a title detected: ${page.id}`);
                         }
@@ -97,7 +102,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                         await (0, imageProcessor_1.processBlocks)(markdownContent, actions, getCache, createNodeId, reporter);
                         const postNode = {
                             id: nodeId,
-                            category_id: parentCategoryId,
+                            category: parentCategoryId,
                             book_id: bookId,
                             title: title,
                             content: markdownContent,
@@ -106,14 +111,18 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             version: page.properties?.version?.rich_text?.[0]?.plain_text || null,
                             description: null,
                             slug: slug || `no-title-${nodeId}`,
+                            category_list: categoryPath,
                             children: [],
                             internal: {
+                                owner: "a",
                                 type: constants_1.NODE_TYPE.Post,
                                 contentDigest: crypto_1.default
                                     .createHash(`md5`)
                                     .update(JSON.stringify(nodeId))
                                     .digest(`hex`),
                             },
+                            tags: [],
+                            parent: null,
                         };
                         await createNode(postNode);
                         if (parentCategoryId && postNode) {

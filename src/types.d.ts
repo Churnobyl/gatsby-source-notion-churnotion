@@ -5,9 +5,49 @@ import type {
   GatsbyCache,
   PluginOptions as GatsbyDefaultPluginOptions,
   IPluginRefOptions,
+  Node,
   NodeInput,
   Reporter,
 } from "gatsby";
+import { MdBlock } from "notion-to-md/build/types";
+
+export interface IPost extends Node {
+  id: string;
+  category: tags;
+  tags: ITag[];
+  book_id: IBook;
+  title: string;
+  content: MdBlock[];
+  create_date: Date;
+  update_date: Date;
+  version: number;
+  description: string | null;
+  slug: string;
+  category_list: ICategory[];
+  internal: Node.Internal;
+  children: [];
+}
+
+export interface ITag extends Node {
+  id: string;
+  tag_name: string;
+  color: string;
+}
+
+export interface ICategory extends Node {
+  id: string;
+  parent: string | null;
+  category_name: string;
+  slug: string;
+  internal: Node.Internal;
+}
+
+export interface IBook extends Node {
+  id: string;
+  book_name: string;
+  create_date: Date;
+  update_date: Date;
+}
 
 export interface IPageFilter {
   property: string;

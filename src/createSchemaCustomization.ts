@@ -8,7 +8,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
     createTypes(`
         type ${NODE_TYPE.Post} implements Node {
             id: ID!
-            category_id: ${NODE_TYPE.Category} @link(by: "id")
+            category: ${NODE_TYPE.Category}! @link(by: "id", from: "category")
             tags: ${NODE_TYPE.Tag} @link(by: "id")
             book_id: ${NODE_TYPE.Book} @link(by: "id")
             title: String
@@ -18,6 +18,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             version: Int
             description: String
             slug: String
+            category_list: [${NODE_TYPE.Category}]
         }
         
         type ${NODE_TYPE.Tag} implements Node {
@@ -28,9 +29,10 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
 
         type ${NODE_TYPE.Category} implements Node {
             id: ID!
-            parent_id: ${NODE_TYPE.Category} @link(by: "id")
+            parent: ${NODE_TYPE.Category} @link(by: "id", from: "parent")
             category_name: String!
             slug: String!
+            children: [${NODE_TYPE.Category}!]! @link(by: "parent")
         }
 
         type ${NODE_TYPE.Book} implements Node {

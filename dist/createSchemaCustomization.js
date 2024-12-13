@@ -7,7 +7,7 @@ const createSchemaCustomization = ({ actions }) => {
     createTypes(`
         type ${constants_1.NODE_TYPE.Post} implements Node {
             id: ID!
-            category_id: ${constants_1.NODE_TYPE.Category} @link(by: "id")
+            category: ${constants_1.NODE_TYPE.Category}! @link(by: "id", from: "category")
             tags: ${constants_1.NODE_TYPE.Tag} @link(by: "id")
             book_id: ${constants_1.NODE_TYPE.Book} @link(by: "id")
             title: String
@@ -17,6 +17,7 @@ const createSchemaCustomization = ({ actions }) => {
             version: Int
             description: String
             slug: String
+            category_list: [${constants_1.NODE_TYPE.Category}]
         }
         
         type ${constants_1.NODE_TYPE.Tag} implements Node {
@@ -27,9 +28,10 @@ const createSchemaCustomization = ({ actions }) => {
 
         type ${constants_1.NODE_TYPE.Category} implements Node {
             id: ID!
-            parent_id: ${constants_1.NODE_TYPE.Category} @link(by: "id")
+            parent: ${constants_1.NODE_TYPE.Category} @link(by: "id", from: "parent")
             category_name: String!
             slug: String!
+            children: [${constants_1.NODE_TYPE.Category}!]! @link(by: "parent")
         }
 
         type ${constants_1.NODE_TYPE.Book} implements Node {

@@ -1,6 +1,6 @@
-import crypto, { hash } from "crypto";
+import crypto from "crypto";
 import { NODE_TYPE } from "../constants";
-import { IGetPagesParams } from "../types";
+import { ICategory, IGetPagesParams, IPost } from "../types";
 import { fetchGetWithRetry, fetchPostWithRetry } from "../util/fetchData";
 import { processBlocks } from "../util/imageProcessor";
 import { slugify } from "../util/slugify";
@@ -16,7 +16,7 @@ export const getPages = async ({
   createParentChildLink,
   getNode,
 }: IGetPagesParams) => {
-  let hasMore = true;
+  let hasMore: boolean = true;
 
   /**
    * 데이터베이스 내에 페이지들을 읽어서 재귀적으로 추가하는 서브 메서드드
@@ -25,7 +25,8 @@ export const getPages = async ({
    */
   const processDatabase = async (
     databaseId: string,
-    parentCategoryId: string | null = null
+    parentCategoryId: string | null = null,
+    categoryPath: ICategory[] = []
   ) => {
     try {
       while (hasMore) {
@@ -61,10 +62,10 @@ export const getPages = async ({
 
             const nodeId = createNodeId(`${categoryJsonData.id}-category`);
 
-            const categoryNode = {
+            const categoryNode: ICategory = {
               id: nodeId,
               category_name: title,
-              parent_id: parentCategoryId,
+              parent: parentCategoryId,
               slug: slug || `no-title-${categoryJsonData.id}`,
               children: [],
               internal: {
@@ -94,14 +95,16 @@ export const getPages = async ({
               }
             }
 
-            await processDatabase(categoryJsonData.id, nodeId);
+            const newCategoryPath = [...categoryPath, categoryNode];
+
+            await processDatabase(categoryJsonData.id, nodeId, newCategoryPath);
           } else {
             // 페이지인 경우
 
-            const title =
+            const title: string =
               page.properties?.[`이름`]?.title?.[0]?.plain_text || `Unnamed`;
             const slug = slugify(
-              page.properties?.[`slug`]?.rich_text?.plain_text ||
+              page.properties?.[`slug`]?.rich_text?.[0]?.plain_text ||
                 crypto
                   .createHash(`md5`)
                   .update(JSON.stringify(title))
@@ -147,9 +150,9 @@ export const getPages = async ({
               reporter
             );
 
-            const postNode = {
+            const postNode: IPost = {
               id: nodeId,
-              category_id: parentCategoryId,
+              category: parentCategoryId,
               book_id: bookId,
               title: title,
               content: markdownContent,
@@ -159,14 +162,18 @@ export const getPages = async ({
                 page.properties?.version?.rich_text?.[0]?.plain_text || null,
               description: null,
               slug: slug || `no-title-${nodeId}`,
+              category_list: categoryPath,
               children: [],
               internal: {
+                owner: "a",
                 type: NODE_TYPE.Post,
                 contentDigest: crypto
                   .createHash(`md5`)
                   .update(JSON.stringify(nodeId))
                   .digest(`hex`),
               },
+              tags: [],
+              parent: null,
             };
 
             await createNode(postNode);
