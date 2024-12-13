@@ -86,4 +86,4 @@ query MyQuery {
 This will return results in MDX format, as shown below:
 
 
-![alt text](readme3.png)# gatsby-source-notion-churnotion
+![alt text](readme3.png)
