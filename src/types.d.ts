@@ -15,7 +15,8 @@ export interface IPost extends Node {
   id: string;
   category: tags;
   tags: string[];
-  book_id: IBook;
+  book: IBook;
+  book_index: number;
   title: string;
   content: MdBlock[];
   create_date: Date;
@@ -41,6 +42,7 @@ export interface ICategory extends Node {
   category_name: string;
   slug: string;
   internal: Node.Internal;
+  children: [];
 }
 
 export interface IBook extends Node {
@@ -48,6 +50,7 @@ export interface IBook extends Node {
   book_name: string;
   create_date: Date;
   update_date: Date;
+  internal: Node.Internal;
 }
 
 export interface IPageFilter {

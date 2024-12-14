@@ -10,7 +10,8 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             id: ID!
             category: ${NODE_TYPE.Category}! @link(by: "id", from: "category")
             tags: [${NODE_TYPE.Tag}] @link(by: "id")
-            book_id: ${NODE_TYPE.Book} @link(by: "id")
+            book: ${NODE_TYPE.Book} @link(by: "id")
+            book_index: Int
             title: String
             content: [JSON]
             create_date: Date! @dateformat

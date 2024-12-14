@@ -41,7 +41,7 @@ export const getPages = async ({
         }
 
         for (const page of result.results) {
-          reporter.info(`[CHECK!!!] page: ${page.id}`);
+          reporter.info(`[CHECK] page: ${page.id}`);
 
           const pageUrl = `blocks/${page.id}/children?page_size=100`;
 
@@ -179,7 +179,8 @@ export const getPages = async ({
             const postNode: IPost = {
               id: nodeId,
               category: parentCategoryId,
-              book_id: bookId,
+              book: getNode(`${bookId}-book`),
+              book_index: page.properties?.bookIndex?.number || 0,
               title: title,
               content: markdownContent,
               create_date: page.created_time,
@@ -202,7 +203,17 @@ export const getPages = async ({
 
             await createNode(postNode);
 
-            // tag와 post 부모-자식 관계 설정정
+            // book과 post 부모-자식 관계 설정
+            const bookNode = getNode(bookId);
+
+            if (bookNode) {
+              createParentChildLink({
+                parent: bookNode,
+                child: postNode,
+              });
+            }
+
+            // tag와 post 부모-자식 관계 설정
             tagIds.forEach((tagId) => {
               const tagNode = getNode(tagId);
               if (tagNode) {

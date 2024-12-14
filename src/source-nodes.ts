@@ -23,6 +23,17 @@ export const sourceNodes: GatsbyNode["sourceNodes"] = async (
   reporter.info(`[INFO] Fetching pages from Notion database...`);
 
   try {
+    await getBooks({
+      token,
+      databaseId,
+      reporter,
+      getCache,
+      actions,
+      createNode,
+      createNodeId,
+      createParentChildLink,
+      getNode,
+    });
     await getPages({
       token,
       databaseId,
