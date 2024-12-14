@@ -184,8 +184,7 @@ export const getPages = async ({
               content: markdownContent,
               create_date: page.created_time,
               update_date: page.last_edited_time,
-              version:
-                page.properties?.version?.rich_text?.[0]?.plain_text || null,
+              version: page.properties?.version?.number || null,
               description: null,
               slug: slug || `no-title-${nodeId}`,
               category_list: categoryPath,
