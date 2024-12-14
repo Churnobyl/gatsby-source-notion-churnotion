@@ -204,7 +204,8 @@ export const getPages = async ({
             await createNode(postNode);
 
             // book과 post 부모-자식 관계 설정
-            const bookNode = getNode(bookId);
+            const bookNodeId = createNodeId(`${bookId}-book`);
+            const bookNode = getNode(bookNodeId);
 
             if (bookNode) {
               createParentChildLink({
@@ -212,7 +213,7 @@ export const getPages = async ({
                 child: postNode,
               });
               reporter.info(
-                `[SUCCESS] Linked tag: ${bookNode.book_name} -> page: ${postNode.title}`
+                `[SUCCESS] Linked book: ${bookNode.book_name} -> page: ${postNode.title}`
               );
             }
 

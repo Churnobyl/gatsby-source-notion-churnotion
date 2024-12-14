@@ -24,7 +24,7 @@ const getBooks = async ({ bookDatabaseId, reporter, createNode, createNodeId, })
             parent: null,
             children: [],
             internal: {
-                type: constants_1.NODE_TYPE.Category,
+                type: constants_1.NODE_TYPE.Book,
                 contentDigest: crypto_1.default
                     .createHash(`md5`)
                     .update(JSON.stringify(page))
