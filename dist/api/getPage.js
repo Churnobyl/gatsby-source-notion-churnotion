@@ -83,19 +83,25 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                         }
                         const nodeId = createNodeId(`${page.id}-page`);
                         // Tag 노드 만들기
+                        const tagIds = [];
                         if (page.properties.tags && page.properties.tags.multi_select) {
-                            page.properties.tags.multi_select.map((tagData) => createNode({
-                                id: createNodeId(`${tagData.id}-tag`),
-                                tag_name: tagData.name,
-                                color: tagData.color,
-                                internal: {
-                                    type: constants_1.NODE_TYPE.Tag,
-                                    contentDigest: crypto_1.default
-                                        .createHash(`md5`)
-                                        .update(JSON.stringify(tagData.id))
-                                        .digest(`hex`),
-                                },
-                            }));
+                            page.properties.tags.multi_select.forEach((tagData) => {
+                                const tagNodeId = createNodeId(`${tagData.id}-tag`);
+                                tagIds.push(tagNodeId); // 태그 ID 저장
+                                createNode({
+                                    id: tagNodeId,
+                                    tag_name: tagData.name,
+                                    color: tagData.color,
+                                    churnotions: [],
+                                    internal: {
+                                        type: constants_1.NODE_TYPE.Tag,
+                                        contentDigest: crypto_1.default
+                                            .createHash(`md5`)
+                                            .update(JSON.stringify(tagData))
+                                            .digest(`hex`),
+                                    },
+                                });
+                            });
                         }
                         const bookId = page.properties?.book?.relation?.[0]?.id || null;
                         const markdownContent = await connector_1.n2m.pageToMarkdown(page.id);
@@ -120,7 +126,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                                     .update(JSON.stringify(nodeId))
                                     .digest(`hex`),
                             },
-                            tags: [],
+                            tags: tagIds,
                             parent: null,
                         };
                         await createNode(postNode);

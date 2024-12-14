@@ -26,7 +26,8 @@ export const getPages = async ({
   const processDatabase = async (
     databaseId: string,
     parentCategoryId: string | null = null,
-    categoryPath: ICategory[] = []
+    categoryPath: ICategory[] = [],
+    tagMap: Record<string, string> = {}
   ) => {
     try {
       while (hasMore) {
@@ -97,7 +98,12 @@ export const getPages = async ({
 
             const newCategoryPath = [...categoryPath, categoryNode];
 
-            await processDatabase(categoryJsonData.id, nodeId, newCategoryPath);
+            await processDatabase(
+              categoryJsonData.id,
+              nodeId,
+              newCategoryPath,
+              tagMap
+            );
           } else {
             // 페이지인 경우
 
@@ -124,22 +130,36 @@ export const getPages = async ({
             if (page.properties.tags && page.properties.tags.multi_select) {
               page.properties.tags.multi_select.forEach(
                 (tagData: { name: string; color: string; id: string }) => {
-                  const tagNodeId = createNodeId(`${tagData.id}-tag`);
-                  tagIds.push(tagNodeId); // 태그 ID 저장
+                  if (tagMap[tagData.name]) {
+                    // 이미 존재하는 태그라면 tagMap에서 가져오기
+                    const existingTagId = tagMap[tagData.name];
+                    tagIds.push(existingTagId); // 기존 태그 ID 추가
+                    reporter.info(
+                      `[INFO] Reusing existing tag: ${tagData.name}`
+                    );
+                  } else {
+                    // 새로운 태그 생성
+                    const tagNodeId = createNodeId(`${tagData.id}-tag`);
+                    tagMap[tagData.name] = tagNodeId; // tagMap에 저장
+                    tagIds.push(tagNodeId); // 새로운 태그 ID 추가
 
-                  createNode({
-                    id: tagNodeId,
-                    tag_name: tagData.name,
-                    color: tagData.color,
-                    churnotions: [],
-                    internal: {
-                      type: NODE_TYPE.Tag,
-                      contentDigest: crypto
-                        .createHash(`md5`)
-                        .update(JSON.stringify(tagData))
-                        .digest(`hex`),
-                    },
-                  });
+                    // 태그 노드 생성
+                    const tagNode = {
+                      id: tagNodeId,
+                      tag_name: tagData.name,
+                      color: tagData.color,
+                      churnotions: [], // 연결된 페이지 리스트 초기화
+                      internal: {
+                        type: NODE_TYPE.Tag,
+                        contentDigest: crypto
+                          .createHash(`md5`)
+                          .update(JSON.stringify(tagData))
+                          .digest(`hex`),
+                      },
+                    };
+                    createNode(tagNode);
+                    reporter.info(`[SUCCESS] Created new tag: ${tagData.name}`);
+                  }
                 }
               );
             }
@@ -183,6 +203,23 @@ export const getPages = async ({
 
             await createNode(postNode);
 
+            // tag와 post 부모-자식 관계 설정정
+            tagIds.forEach((tagId) => {
+              const tagNode = getNode(tagId);
+              if (tagNode) {
+                createParentChildLink({
+                  parent: tagNode,
+                  child: postNode,
+                });
+                reporter.info(
+                  `[SUCCESS] Linked tag: ${tagNode.tag_name} -> page: ${postNode.title}`
+                );
+              } else {
+                reporter.warn(`[WARNING] Tag node not found for ID: ${tagId}`);
+              }
+            });
+
+            // category와 post 부모-자식 관계 설정
             if (parentCategoryId && postNode) {
               const parentNode = getNode(parentCategoryId); // Gatsby에서 노드를 검색
               if (parentNode) {

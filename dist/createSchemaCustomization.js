@@ -8,7 +8,7 @@ const createSchemaCustomization = ({ actions }) => {
         type ${constants_1.NODE_TYPE.Post} implements Node {
             id: ID!
             category: ${constants_1.NODE_TYPE.Category}! @link(by: "id", from: "category")
-            tags: ${constants_1.NODE_TYPE.Tag} @link(by: "id")
+            tags: [${constants_1.NODE_TYPE.Tag}] @link(by: "id")
             book_id: ${constants_1.NODE_TYPE.Book} @link(by: "id")
             title: String
             content: [JSON]
@@ -24,6 +24,7 @@ const createSchemaCustomization = ({ actions }) => {
             id: ID!
             tag_name: String!
             color: String!
+            churnotions: [${constants_1.NODE_TYPE.Post}] @link(by: "id", from: "tags")
         }
 
         type ${constants_1.NODE_TYPE.Category} implements Node {
