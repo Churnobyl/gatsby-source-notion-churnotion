@@ -9,7 +9,8 @@ const createSchemaCustomization = ({ actions }) => {
             id: ID!
             category: ${constants_1.NODE_TYPE.Category}! @link(by: "id", from: "category")
             tags: [${constants_1.NODE_TYPE.Tag}] @link(by: "id")
-            book_id: ${constants_1.NODE_TYPE.Book} @link(by: "id")
+            book: ${constants_1.NODE_TYPE.Book} @link(by: "id")
+            book_index: Int
             title: String
             content: [JSON]
             create_date: Date! @dateformat

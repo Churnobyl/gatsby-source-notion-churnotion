@@ -27,7 +27,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                     reporter.info(`[SUCCESS] total pages > ${result.results.length}`);
                 }
                 for (const page of result.results) {
-                    reporter.info(`[CHECK!!!] page: ${page.id}`);
+                    reporter.info(`[CHECK] page: ${page.id}`);
                     const pageUrl = `blocks/${page.id}/children?page_size=100`;
                     // 페이지 데이터
                     const pageData = await (0, fetchData_1.fetchGetWithRetry)(pageUrl);
@@ -122,12 +122,13 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                         const postNode = {
                             id: nodeId,
                             category: parentCategoryId,
-                            book_id: bookId,
+                            book: getNode(`${bookId}-book`),
+                            book_index: page.properties?.bookIndex?.number || 0,
                             title: title,
                             content: markdownContent,
                             create_date: page.created_time,
                             update_date: page.last_edited_time,
-                            version: page.properties?.version?.rich_text?.[0]?.plain_text || null,
+                            version: page.properties?.version?.number || null,
                             description: null,
                             slug: slug || `no-title-${nodeId}`,
                             category_list: categoryPath,
@@ -143,7 +144,15 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             parent: null,
                         };
                         await createNode(postNode);
-                        // tag와 post 부모-자식 관계 설정정
+                        // book과 post 부모-자식 관계 설정
+                        const bookNode = getNode(bookId);
+                        if (bookNode) {
+                            createParentChildLink({
+                                parent: bookNode,
+                                child: postNode,
+                            });
+                        }
+                        // tag와 post 부모-자식 관계 설정
                         tagIds.forEach((tagId) => {
                             const tagNode = getNode(tagId);
                             if (tagNode) {

@@ -1,9 +1,11 @@
 import type { GatsbyNode, PluginOptions } from "gatsby";
-import { getPages } from "./api/getPage";
+import { getPages } from "./api/getPages";
+import { getBooks } from "./api/getBooks";
 
 interface ISourceNodesOptions extends PluginOptions {
   token: string;
   databaseId: string;
+  bookDatabaseId: string;
 }
 
 export const sourceNodes: GatsbyNode["sourceNodes"] = async (
@@ -13,7 +15,7 @@ export const sourceNodes: GatsbyNode["sourceNodes"] = async (
   const { actions, reporter, createNodeId, getNode, getCache } = gatsbyApi;
   const { createNode, createParentChildLink } = actions;
 
-  const { token, databaseId } = options;
+  const { token, databaseId, bookDatabaseId } = options;
 
   if (!token || !databaseId) {
     reporter.error(`[ERROR] Missing Notion API token or database ID.`);
@@ -24,15 +26,10 @@ export const sourceNodes: GatsbyNode["sourceNodes"] = async (
 
   try {
     await getBooks({
-      token,
-      databaseId,
+      bookDatabaseId,
       reporter,
-      getCache,
-      actions,
       createNode,
       createNodeId,
-      createParentChildLink,
-      getNode,
     });
     await getPages({
       token,

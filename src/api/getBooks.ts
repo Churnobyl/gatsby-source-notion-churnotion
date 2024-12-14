@@ -1,22 +1,15 @@
 import crypto from "crypto";
 import { NODE_TYPE } from "../constants";
-import { IBook, ICategory, IGetPagesParams, IPost } from "../types";
-import { fetchGetWithRetry, fetchPostWithRetry } from "../util/fetchData";
-import { processBlocks } from "../util/imageProcessor";
-import { slugify } from "../util/slugify";
-import { n2m } from "./connector";
+import { IBook, IGetBooksParams, IGetPagesParams } from "../types";
+import { fetchPostWithRetry } from "../util/fetchData";
 
 export const getBooks = async ({
-  databaseId,
+  bookDatabaseId,
   reporter,
-  getCache,
-  actions,
   createNode,
   createNodeId,
-  createParentChildLink,
-  getNode,
-}: IGetPagesParams) => {
-  const databaseUrl = `databases/${databaseId}/query`;
+}: IGetBooksParams) => {
+  const databaseUrl = `databases/${bookDatabaseId}/query`;
   const body = {};
 
   const result = await fetchPostWithRetry(databaseUrl, body);

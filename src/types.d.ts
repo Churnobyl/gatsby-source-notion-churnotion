@@ -81,6 +81,18 @@ export interface IGetPagesParams {
   getNode: any;
 }
 
+export interface IGetBooksParams {
+  bookDatabaseId: string;
+  reporter: Reporter;
+  createNode: (
+    this: void,
+    node: NodeInput,
+    plugin?: ActionPlugin,
+    options?: ActionOptions
+  ) => void | Promise<void>;
+  createNodeId: (this: void, input: string) => string;
+}
+
 export interface IAuthorInput {
   id: number;
   name: string;
