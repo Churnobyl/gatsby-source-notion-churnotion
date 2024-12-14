@@ -120,21 +120,27 @@ export const getPages = async ({
             const nodeId = createNodeId(`${page.id}-page`);
 
             // Tag 노드 만들기
+            const tagIds: string[] = [];
             if (page.properties.tags && page.properties.tags.multi_select) {
-              page.properties.tags.multi_select.map(
-                (tagData: { name: string; color: string; id: string }) =>
+              page.properties.tags.multi_select.forEach(
+                (tagData: { name: string; color: string; id: string }) => {
+                  const tagNodeId = createNodeId(`${tagData.id}-tag`);
+                  tagIds.push(tagNodeId); // 태그 ID 저장
+
                   createNode({
-                    id: createNodeId(`${tagData.id}-tag`),
+                    id: tagNodeId,
                     tag_name: tagData.name,
                     color: tagData.color,
+                    churnotions: [],
                     internal: {
                       type: NODE_TYPE.Tag,
                       contentDigest: crypto
                         .createHash(`md5`)
-                        .update(JSON.stringify(tagData.id))
+                        .update(JSON.stringify(tagData))
                         .digest(`hex`),
                     },
-                  })
+                  });
+                }
               );
             }
 
@@ -165,14 +171,13 @@ export const getPages = async ({
               category_list: categoryPath,
               children: [],
               internal: {
-                owner: "a",
                 type: NODE_TYPE.Post,
                 contentDigest: crypto
                   .createHash(`md5`)
                   .update(JSON.stringify(nodeId))
                   .digest(`hex`),
               },
-              tags: [],
+              tags: tagIds,
               parent: null,
             };
 

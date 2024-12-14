@@ -9,7 +9,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
         type ${NODE_TYPE.Post} implements Node {
             id: ID!
             category: ${NODE_TYPE.Category}! @link(by: "id", from: "category")
-            tags: ${NODE_TYPE.Tag} @link(by: "id")
+            tags: [${NODE_TYPE.Tag}] @link(by: "id")
             book_id: ${NODE_TYPE.Book} @link(by: "id")
             title: String
             content: [JSON]
@@ -25,6 +25,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             id: ID!
             tag_name: String!
             color: String!
+            churnotions: [${NODE_TYPE.Post}] @link(by: "id", from: "tags")
         }
 
         type ${NODE_TYPE.Category} implements Node {

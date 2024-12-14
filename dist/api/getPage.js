@@ -114,7 +114,6 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             category_list: categoryPath,
                             children: [],
                             internal: {
-                                owner: "a",
                                 type: constants_1.NODE_TYPE.Post,
                                 contentDigest: crypto_1.default
                                     .createHash(`md5`)

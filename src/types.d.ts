@@ -14,7 +14,7 @@ import { MdBlock } from "notion-to-md/build/types";
 export interface IPost extends Node {
   id: string;
   category: tags;
-  tags: ITag[];
+  tags: string[];
   book_id: IBook;
   title: string;
   content: MdBlock[];
@@ -32,6 +32,7 @@ export interface ITag extends Node {
   id: string;
   tag_name: string;
   color: string;
+  churnotions: string[];
 }
 
 export interface ICategory extends Node {
