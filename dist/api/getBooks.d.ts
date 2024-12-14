@@ -1,2 +1,2 @@
-import { IGetPagesParams } from "../types";
-export declare const getBooks: ({ databaseId, reporter, getCache, actions, createNode, createNodeId, createParentChildLink, getNode, }: IGetPagesParams) => Promise<void>;
+import { IGetBooksParams } from "../types";
+export declare const getBooks: ({ bookDatabaseId, reporter, createNode, createNodeId, }: IGetBooksParams) => Promise<void>;

@@ -211,6 +211,9 @@ export const getPages = async ({
                 parent: bookNode,
                 child: postNode,
               });
+              reporter.info(
+                `[SUCCESS] Linked tag: ${bookNode.book_name} -> page: ${postNode.title}`
+              );
             }
 
             // tag와 post 부모-자식 관계 설정

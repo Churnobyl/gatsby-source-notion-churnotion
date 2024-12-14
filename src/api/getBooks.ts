@@ -30,7 +30,7 @@ export const getBooks = async ({
       parent: null,
       children: [],
       internal: {
-        type: NODE_TYPE.Category,
+        type: NODE_TYPE.Book,
         contentDigest: crypto
           .createHash(`md5`)
           .update(JSON.stringify(page))

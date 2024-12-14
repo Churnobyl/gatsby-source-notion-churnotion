@@ -7,8 +7,8 @@ exports.getBooks = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const constants_1 = require("../constants");
 const fetchData_1 = require("../util/fetchData");
-const getBooks = async ({ databaseId, reporter, getCache, actions, createNode, createNodeId, createParentChildLink, getNode, }) => {
-    const databaseUrl = `databases/${databaseId}/query`;
+const getBooks = async ({ bookDatabaseId, reporter, createNode, createNodeId, }) => {
+    const databaseUrl = `databases/${bookDatabaseId}/query`;
     const body = {};
     const result = await (0, fetchData_1.fetchPostWithRetry)(databaseUrl, body);
     if (result?.results?.length) {
