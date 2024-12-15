@@ -64,7 +64,9 @@ export const getPages = async ({
 
             const nodeId = createNodeId(`${categoryJsonData.id}-category`);
 
-            categoryUrl += `/${slug}`;
+            categoryUrl += `${
+              categoryUrl.length === 0 ? `${CATEGORY_URI}` : ``
+            }/${slug}`;
 
             const categoryNode: ICategory = {
               id: nodeId,

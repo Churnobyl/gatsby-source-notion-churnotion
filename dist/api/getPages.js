@@ -39,7 +39,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             reporter.warn(`[WARNING] Category without a title detected: ${categoryJsonData.id}`);
                         }
                         const nodeId = createNodeId(`${categoryJsonData.id}-category`);
-                        categoryUrl += `/${slug}`;
+                        categoryUrl += `${categoryUrl.length === 0 ? `${constants_1.CATEGORY_URI}` : ``}/${slug}`;
                         const categoryNode = {
                             id: nodeId,
                             category_name: title,
