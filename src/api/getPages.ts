@@ -64,7 +64,7 @@ export const getPages = async ({
 
             const nodeId = createNodeId(`${categoryJsonData.id}-category`);
 
-            categoryUrl += `${categoryUrl.length === 0 ? "" : "/"}${slug}`;
+            categoryUrl += `/${slug}`;
 
             const categoryNode: ICategory = {
               id: nodeId,
@@ -79,7 +79,7 @@ export const getPages = async ({
                   .update(JSON.stringify(categoryJsonData))
                   .digest(`hex`),
               },
-              url: `${COMMON_URI}/${CATEGORY_URI}/${categoryUrl}`,
+              url: `${COMMON_URI}${CATEGORY_URI}/${categoryUrl}`,
             };
             createNode(categoryNode);
 
@@ -208,9 +208,7 @@ export const getPages = async ({
               },
               tags: tagIds,
               parent: null,
-              url: `${
-                categoryUrl.length === 0 ? "" : "/"
-              }/${categoryUrl}/${slug}`,
+              url: `${COMMON_URI}${categoryUrl}/${slug}`,
             };
 
             await createNode(postNode);

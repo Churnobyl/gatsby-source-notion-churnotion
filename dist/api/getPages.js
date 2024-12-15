@@ -39,7 +39,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             reporter.warn(`[WARNING] Category without a title detected: ${categoryJsonData.id}`);
                         }
                         const nodeId = createNodeId(`${categoryJsonData.id}-category`);
-                        categoryUrl += `${categoryUrl.length === 0 ? "" : "/"}${slug}`;
+                        categoryUrl += `/${slug}`;
                         const categoryNode = {
                             id: nodeId,
                             category_name: title,
@@ -53,7 +53,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                                     .update(JSON.stringify(categoryJsonData))
                                     .digest(`hex`),
                             },
-                            url: `${constants_1.COMMON_URI}/${constants_1.CATEGORY_URI}/${categoryUrl}`,
+                            url: `${constants_1.COMMON_URI}${constants_1.CATEGORY_URI}/${categoryUrl}`,
                         };
                         createNode(categoryNode);
                         if (parentCategoryId && categoryNode) {
@@ -149,7 +149,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             },
                             tags: tagIds,
                             parent: null,
-                            url: `${categoryUrl.length === 0 ? "" : "/"}/${categoryUrl}/${slug}`,
+                            url: `${constants_1.COMMON_URI}${categoryUrl}/${slug}`,
                         };
                         await createNode(postNode);
                         // book과 post 부모-자식 관계 설정
