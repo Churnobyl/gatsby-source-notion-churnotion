@@ -148,7 +148,7 @@ export const getPages = async ({
                       id: tagNodeId,
                       tag_name: tagData.name,
                       color: tagData.color,
-                      churnotions: [], // 연결된 페이지 리스트 초기화
+                      children: [],
                       internal: {
                         type: NODE_TYPE.Tag,
                         contentDigest: crypto

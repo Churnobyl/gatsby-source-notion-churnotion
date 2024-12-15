@@ -102,7 +102,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                                         id: tagNodeId,
                                         tag_name: tagData.name,
                                         color: tagData.color,
-                                        churnotions: [], // 연결된 페이지 리스트 초기화
+                                        children: [],
                                         internal: {
                                             type: constants_1.NODE_TYPE.Tag,
                                             contentDigest: crypto_1.default

@@ -26,7 +26,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             id: ID!
             tag_name: String!
             color: String!
-            churnotions: [${NODE_TYPE.Post}] @link(by: "id", from: "tags")
+            children: [${NODE_TYPE.Post}] @link(by: "id", from: "tags")
         }
 
         type ${NODE_TYPE.Category} implements Node {
@@ -35,6 +35,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             category_name: String!
             slug: String!
             children: [${NODE_TYPE.Category}!]! @link(by: "parent")
+            churnotions: [${NODE_TYPE.Post}] @link(by: "book", from: "id")
         }
 
         type ${NODE_TYPE.Book} implements Node {
@@ -42,6 +43,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             book_name: String!
             create_date: Date! @dateformat
             update_date: Date! @dateformat
+            children: [${NODE_TYPE.Post}] @link(by: "book", from: "id")
         }
     `);
   };
