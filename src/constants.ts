@@ -9,3 +9,10 @@ export const NODE_TYPE = {
   Tag: `NTag`,
   Book: `NBook`,
 };
+
+///////////////url resource///////////////////////
+export const COMMON_URI = `blog`;
+export const POST_URI = `post`;
+export const BOOK_URI = `book`;
+export const TAG_URI = `tag`;
+export const CATEGORY_URI = `category`;

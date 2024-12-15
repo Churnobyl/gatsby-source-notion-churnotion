@@ -1,6 +1,6 @@
 import crypto from "crypto";
-import { NODE_TYPE } from "../constants";
-import { ICategory, IGetPagesParams, IPost } from "../types";
+import { CATEGORY_URI, COMMON_URI, NODE_TYPE, TAG_URI } from "../constants";
+import { ICategory, IGetPagesParams, IPost, ITag } from "../types";
 import { fetchGetWithRetry, fetchPostWithRetry } from "../util/fetchData";
 import { processBlocks } from "../util/imageProcessor";
 import { slugify } from "../util/slugify";
@@ -27,7 +27,8 @@ export const getPages = async ({
     databaseId: string,
     parentCategoryId: string | null = null,
     categoryPath: ICategory[] = [],
-    tagMap: Record<string, string> = {}
+    tagMap: Record<string, string> = {},
+    categoryUrl: string = ``
   ) => {
     try {
       while (hasMore) {
@@ -53,7 +54,7 @@ export const getPages = async ({
 
             const title =
               categoryJsonData.child_database?.title || `Unnamed Category`;
-            const slug = slugify(title);
+            const slug = slugify(title) || `no-title-${categoryJsonData.id}`;
 
             if (!title) {
               reporter.warn(
@@ -63,11 +64,13 @@ export const getPages = async ({
 
             const nodeId = createNodeId(`${categoryJsonData.id}-category`);
 
+            categoryUrl += `${categoryUrl.length === 0 ? "" : "/"}${slug}`;
+
             const categoryNode: ICategory = {
               id: nodeId,
               category_name: title,
               parent: parentCategoryId,
-              slug: slug || `no-title-${categoryJsonData.id}`,
+              slug: slug,
               children: [],
               internal: {
                 type: NODE_TYPE.Category,
@@ -76,6 +79,7 @@ export const getPages = async ({
                   .update(JSON.stringify(categoryJsonData))
                   .digest(`hex`),
               },
+              url: `${COMMON_URI}/${CATEGORY_URI}/${categoryUrl}`,
             };
             createNode(categoryNode);
 
@@ -102,7 +106,8 @@ export const getPages = async ({
               categoryJsonData.id,
               nodeId,
               newCategoryPath,
-              tagMap
+              tagMap,
+              categoryUrl
             );
           } else {
             // 페이지인 경우
@@ -142,11 +147,13 @@ export const getPages = async ({
                     const tagNodeId = createNodeId(`${tagData.id}-tag`);
                     tagMap[tagData.name] = tagNodeId; // tagMap에 저장
                     tagIds.push(tagNodeId); // 새로운 태그 ID 추가
+                    const slug = slugify(tagData.name) || `no-tag-${tagNodeId}`;
 
                     // 태그 노드 생성
-                    const tagNode = {
+                    const tagNode: ITag = {
                       id: tagNodeId,
                       tag_name: tagData.name,
+                      slug: slug,
                       color: tagData.color,
                       children: [],
                       internal: {
@@ -156,6 +163,9 @@ export const getPages = async ({
                           .update(JSON.stringify(tagData))
                           .digest(`hex`),
                       },
+                      url: `${COMMON_URI}/${TAG_URI}/${slug}`,
+                      churnotions: [],
+                      parent: null,
                     };
                     createNode(tagNode);
                     reporter.info(`[SUCCESS] Created new tag: ${tagData.name}`);
@@ -165,7 +175,6 @@ export const getPages = async ({
             }
 
             const bookId = page.properties?.book?.relation?.[0]?.id || null;
-
             const markdownContent = await n2m.pageToMarkdown(page.id);
 
             await processBlocks(
@@ -187,7 +196,7 @@ export const getPages = async ({
               update_date: page.last_edited_time,
               version: page.properties?.version?.number || null,
               description: null,
-              slug: slug || `no-title-${nodeId}`,
+              slug: slug,
               category_list: categoryPath,
               children: [],
               internal: {
@@ -199,6 +208,9 @@ export const getPages = async ({
               },
               tags: tagIds,
               parent: null,
+              url: `${
+                categoryUrl.length === 0 ? "" : "/"
+              }/${categoryUrl}/${slug}`,
             };
 
             await createNode(postNode);

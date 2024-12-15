@@ -7,3 +7,8 @@ export declare const NODE_TYPE: {
     Tag: string;
     Book: string;
 };
+export declare const COMMON_URI = "blog";
+export declare const POST_URI = "post";
+export declare const BOOK_URI = "book";
+export declare const TAG_URI = "tag";
+export declare const CATEGORY_URI = "category";

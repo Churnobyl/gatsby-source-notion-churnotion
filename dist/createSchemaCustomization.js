@@ -19,13 +19,16 @@ const createSchemaCustomization = ({ actions }) => {
             description: String
             slug: String
             category_list: [${constants_1.NODE_TYPE.Category}]
+            url: String!
         }
         
         type ${constants_1.NODE_TYPE.Tag} implements Node {
             id: ID!
             tag_name: String!
+            slug: String!
             color: String!
             children: [${constants_1.NODE_TYPE.Post}] @link(by: "id", from: "tags")
+            url: String!
         }
 
         type ${constants_1.NODE_TYPE.Category} implements Node {
@@ -35,6 +38,7 @@ const createSchemaCustomization = ({ actions }) => {
             slug: String!
             children: [${constants_1.NODE_TYPE.Category}!]! @link(by: "parent")
             churnotions: [${constants_1.NODE_TYPE.Post}] @link(by: "book", from: "id")
+            url: String!
         }
 
         type ${constants_1.NODE_TYPE.Book} implements Node {
@@ -43,6 +47,7 @@ const createSchemaCustomization = ({ actions }) => {
             create_date: Date! @dateformat
             update_date: Date! @dateformat
             children: [${constants_1.NODE_TYPE.Post}] @link(by: "book", from: "id")
+            url: String!
         }
     `);
 };

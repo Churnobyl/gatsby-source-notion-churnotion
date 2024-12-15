@@ -1,6 +1,6 @@
 import crypto from "crypto";
-import { NODE_TYPE } from "../constants";
-import { IBook, IGetBooksParams, IGetPagesParams } from "../types";
+import { BOOK_URI, COMMON_URI, NODE_TYPE } from "../constants";
+import { IBook, IGetBooksParams } from "../types";
 import { fetchPostWithRetry } from "../util/fetchData";
 
 export const getBooks = async ({
@@ -22,11 +22,13 @@ export const getBooks = async ({
     reporter.info(`[CHECK] BOOK page: ${page.id}`);
 
     const nodeId = createNodeId(`${page.id}-book`);
+    const slug =
+      page.properties?.slug?.rich_text?.[0]?.plain_text || `unnamed-slug`;
 
     const bookNode: IBook = {
       id: nodeId,
       book_name: page.properties?.[`이름`]?.title?.[0]?.plain_text || `Unnamed`,
-      slug: page.properties?.slug?.rich_text?.plain_text || `unnamed-slug`,
+      slug: slug,
       parent: null,
       children: [],
       internal: {
@@ -38,6 +40,7 @@ export const getBooks = async ({
       },
       create_date: page.created_time,
       update_date: page.last_edited_time,
+      url: `${COMMON_URI}/${BOOK_URI}/${slug}`,
     };
     createNode(bookNode);
   }

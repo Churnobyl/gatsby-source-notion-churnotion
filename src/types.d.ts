@@ -27,13 +27,17 @@ export interface IPost extends Node {
   category_list: ICategory[];
   internal: Node.Internal;
   children: [];
+  url: string;
 }
 
 export interface ITag extends Node {
   id: string;
   tag_name: string;
+  slug: string;
   color: string;
+  internal: Node.Internal;
   churnotions: string[];
+  url: string;
 }
 
 export interface ICategory extends Node {
@@ -43,6 +47,7 @@ export interface ICategory extends Node {
   slug: string;
   internal: Node.Internal;
   children: [];
+  url: string;
 }
 
 export interface IBook extends Node {
@@ -51,6 +56,7 @@ export interface IBook extends Node {
   create_date: Date;
   update_date: Date;
   internal: Node.Internal;
+  url: string;
 }
 
 export interface IPageFilter {

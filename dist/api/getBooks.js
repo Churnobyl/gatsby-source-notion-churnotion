@@ -17,10 +17,11 @@ const getBooks = async ({ bookDatabaseId, reporter, createNode, createNodeId, })
     for (const page of result.results) {
         reporter.info(`[CHECK] BOOK page: ${page.id}`);
         const nodeId = createNodeId(`${page.id}-book`);
+        const slug = page.properties?.slug?.rich_text?.[0]?.plain_text || `unnamed-slug`;
         const bookNode = {
             id: nodeId,
             book_name: page.properties?.[`이름`]?.title?.[0]?.plain_text || `Unnamed`,
-            slug: page.properties?.slug?.rich_text?.plain_text || `unnamed-slug`,
+            slug: slug,
             parent: null,
             children: [],
             internal: {
@@ -32,6 +33,7 @@ const getBooks = async ({ bookDatabaseId, reporter, createNode, createNodeId, })
             },
             create_date: page.created_time,
             update_date: page.last_edited_time,
+            url: `${constants_1.COMMON_URI}/${constants_1.BOOK_URI}/${slug}`,
         };
         createNode(bookNode);
     }

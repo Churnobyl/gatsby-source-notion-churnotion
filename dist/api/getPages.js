@@ -17,7 +17,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
      * @param databaseId 데이터베이스 아이디
      * @param parentCategoryId 부모 데이터베이스 아이디
      */
-    const processDatabase = async (databaseId, parentCategoryId = null, categoryPath = [], tagMap = {}) => {
+    const processDatabase = async (databaseId, parentCategoryId = null, categoryPath = [], tagMap = {}, categoryUrl = ``) => {
         try {
             while (hasMore) {
                 const databaseUrl = `databases/${databaseId}/query`;
@@ -34,16 +34,17 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                     if (pageData.results[0].type === `child_database`) {
                         const categoryJsonData = pageData.results[0];
                         const title = categoryJsonData.child_database?.title || `Unnamed Category`;
-                        const slug = (0, slugify_1.slugify)(title);
+                        const slug = (0, slugify_1.slugify)(title) || `no-title-${categoryJsonData.id}`;
                         if (!title) {
                             reporter.warn(`[WARNING] Category without a title detected: ${categoryJsonData.id}`);
                         }
                         const nodeId = createNodeId(`${categoryJsonData.id}-category`);
+                        categoryUrl += `${categoryUrl.length === 0 ? "" : "/"}${slug}`;
                         const categoryNode = {
                             id: nodeId,
                             category_name: title,
                             parent: parentCategoryId,
-                            slug: slug || `no-title-${categoryJsonData.id}`,
+                            slug: slug,
                             children: [],
                             internal: {
                                 type: constants_1.NODE_TYPE.Category,
@@ -52,6 +53,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                                     .update(JSON.stringify(categoryJsonData))
                                     .digest(`hex`),
                             },
+                            url: `${constants_1.COMMON_URI}/${constants_1.CATEGORY_URI}/${categoryUrl}`,
                         };
                         createNode(categoryNode);
                         if (parentCategoryId && categoryNode) {
@@ -68,7 +70,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             }
                         }
                         const newCategoryPath = [...categoryPath, categoryNode];
-                        await processDatabase(categoryJsonData.id, nodeId, newCategoryPath, tagMap);
+                        await processDatabase(categoryJsonData.id, nodeId, newCategoryPath, tagMap, categoryUrl);
                     }
                     else {
                         // 페이지인 경우
@@ -97,10 +99,12 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                                     const tagNodeId = createNodeId(`${tagData.id}-tag`);
                                     tagMap[tagData.name] = tagNodeId; // tagMap에 저장
                                     tagIds.push(tagNodeId); // 새로운 태그 ID 추가
+                                    const slug = (0, slugify_1.slugify)(tagData.name) || `no-tag-${tagNodeId}`;
                                     // 태그 노드 생성
                                     const tagNode = {
                                         id: tagNodeId,
                                         tag_name: tagData.name,
+                                        slug: slug,
                                         color: tagData.color,
                                         children: [],
                                         internal: {
@@ -110,6 +114,9 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                                                 .update(JSON.stringify(tagData))
                                                 .digest(`hex`),
                                         },
+                                        url: `${constants_1.COMMON_URI}/${constants_1.TAG_URI}/${slug}`,
+                                        churnotions: [],
+                                        parent: null,
                                     };
                                     createNode(tagNode);
                                     reporter.info(`[SUCCESS] Created new tag: ${tagData.name}`);
@@ -130,7 +137,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             update_date: page.last_edited_time,
                             version: page.properties?.version?.number || null,
                             description: null,
-                            slug: slug || `no-title-${nodeId}`,
+                            slug: slug,
                             category_list: categoryPath,
                             children: [],
                             internal: {
@@ -142,6 +149,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             },
                             tags: tagIds,
                             parent: null,
+                            url: `${categoryUrl.length === 0 ? "" : "/"}/${categoryUrl}/${slug}`,
                         };
                         await createNode(postNode);
                         // book과 post 부모-자식 관계 설정
