@@ -11,13 +11,13 @@ const imageProcessor_1 = require("../util/imageProcessor");
 const slugify_1 = require("../util/slugify");
 const connector_1 = require("./connector");
 const getPages = async ({ databaseId, reporter, getCache, actions, createNode, createNodeId, createParentChildLink, getNode, }) => {
-    let hasMore = true;
     /**
      * 데이터베이스 내에 페이지들을 읽어서 재귀적으로 추가하는 서브 메서드드
      * @param databaseId 데이터베이스 아이디
      * @param parentCategoryId 부모 데이터베이스 아이디
      */
     const processDatabase = async (databaseId, parentCategoryId = null, categoryPath = [], tagMap = {}, categoryUrl = ``) => {
+        let hasMore = true;
         try {
             while (hasMore) {
                 const databaseUrl = `databases/${databaseId}/query`;
@@ -39,7 +39,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             reporter.warn(`[WARNING] Category without a title detected: ${categoryJsonData.id}`);
                         }
                         const nodeId = createNodeId(`${categoryJsonData.id}-category`);
-                        categoryUrl += `${categoryUrl.length === 0 ? `${constants_1.CATEGORY_URI}` : ``}/${slug}`;
+                        categoryUrl += `/${slug}`;
                         const categoryNode = {
                             id: nodeId,
                             category_name: title,
@@ -53,7 +53,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                                     .update(JSON.stringify(categoryJsonData))
                                     .digest(`hex`),
                             },
-                            url: `${constants_1.COMMON_URI}${constants_1.CATEGORY_URI}/${categoryUrl}`,
+                            url: `${constants_1.COMMON_URI}/${constants_1.CATEGORY_URI}${categoryUrl}`,
                         };
                         createNode(categoryNode);
                         if (parentCategoryId && categoryNode) {
@@ -80,7 +80,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                                 .createHash(`md5`)
                                 .update(JSON.stringify(title))
                                 .digest(`hex`));
-                        if (!title) {
+                        if (!page.properties?.[`이름`]?.title?.[0]?.plain_text) {
                             reporter.warn(`[WARNING] Category without a title detected: ${page.id}`);
                         }
                         const nodeId = createNodeId(`${page.id}-page`);
@@ -149,7 +149,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             },
                             tags: tagIds,
                             parent: null,
-                            url: `${constants_1.COMMON_URI}${categoryUrl}/${slug}`,
+                            url: `${constants_1.COMMON_URI}/${constants_1.POST_URI}${categoryUrl}/${slug}`,
                         };
                         await createNode(postNode);
                         // book과 post 부모-자식 관계 설정
@@ -197,6 +197,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
         }
         catch (error) {
             reporter.error(`[ERROR] fetching page`);
+            hasMore = false;
         }
     };
     await processDatabase(databaseId);

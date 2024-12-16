@@ -1,5 +1,11 @@
 import crypto from "crypto";
-import { CATEGORY_URI, COMMON_URI, NODE_TYPE, TAG_URI } from "../constants";
+import {
+  CATEGORY_URI,
+  COMMON_URI,
+  NODE_TYPE,
+  POST_URI,
+  TAG_URI,
+} from "../constants";
 import { ICategory, IGetPagesParams, IPost, ITag } from "../types";
 import { fetchGetWithRetry, fetchPostWithRetry } from "../util/fetchData";
 import { processBlocks } from "../util/imageProcessor";
@@ -16,8 +22,6 @@ export const getPages = async ({
   createParentChildLink,
   getNode,
 }: IGetPagesParams) => {
-  let hasMore: boolean = true;
-
   /**
    * 데이터베이스 내에 페이지들을 읽어서 재귀적으로 추가하는 서브 메서드드
    * @param databaseId 데이터베이스 아이디
@@ -30,6 +34,7 @@ export const getPages = async ({
     tagMap: Record<string, string> = {},
     categoryUrl: string = ``
   ) => {
+    let hasMore = true;
     try {
       while (hasMore) {
         const databaseUrl = `databases/${databaseId}/query`;
@@ -64,9 +69,7 @@ export const getPages = async ({
 
             const nodeId = createNodeId(`${categoryJsonData.id}-category`);
 
-            categoryUrl += `${
-              categoryUrl.length === 0 ? `${CATEGORY_URI}` : ``
-            }/${slug}`;
+            categoryUrl += `/${slug}`;
 
             const categoryNode: ICategory = {
               id: nodeId,
@@ -81,7 +84,7 @@ export const getPages = async ({
                   .update(JSON.stringify(categoryJsonData))
                   .digest(`hex`),
               },
-              url: `${COMMON_URI}${CATEGORY_URI}/${categoryUrl}`,
+              url: `${COMMON_URI}/${CATEGORY_URI}${categoryUrl}`,
             };
             createNode(categoryNode);
 
@@ -124,7 +127,7 @@ export const getPages = async ({
                   .digest(`hex`)
             );
 
-            if (!title) {
+            if (!page.properties?.[`이름`]?.title?.[0]?.plain_text) {
               reporter.warn(
                 `[WARNING] Category without a title detected: ${page.id}`
               );
@@ -210,7 +213,7 @@ export const getPages = async ({
               },
               tags: tagIds,
               parent: null,
-              url: `${COMMON_URI}${categoryUrl}/${slug}`,
+              url: `${COMMON_URI}/${POST_URI}${categoryUrl}/${slug}`,
             };
 
             await createNode(postNode);
@@ -269,6 +272,7 @@ export const getPages = async ({
       }
     } catch (error) {
       reporter.error(`[ERROR] fetching page`);
+      hasMore = false;
     }
   };
 
