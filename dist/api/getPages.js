@@ -16,7 +16,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
      * @param databaseId 데이터베이스 아이디
      * @param parentCategoryId 부모 데이터베이스 아이디
      */
-    const processDatabase = async (databaseId, parentCategoryId = null, categoryPath = [], tagMap = {}, categoryUrl = ``) => {
+    const processDatabase = async (databaseId, parentCategoryId = null, categoryPath = [], tagMap = {}, parentCategoryUrl = ``) => {
         let hasMore = true;
         try {
             while (hasMore) {
@@ -39,7 +39,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             reporter.warn(`[WARNING] Category without a title detected: ${categoryJsonData.id}`);
                         }
                         const nodeId = createNodeId(`${categoryJsonData.id}-category`);
-                        categoryUrl += `/${slug}`;
+                        const categoryUrl = `${parentCategoryUrl}/${slug}`;
                         const categoryNode = {
                             id: nodeId,
                             category_name: title,
@@ -125,7 +125,14 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                         }
                         const bookId = page.properties?.book?.relation?.[0]?.id || null;
                         const markdownContent = await connector_1.n2m.pageToMarkdown(page.id);
-                        await (0, imageProcessor_1.processBlocks)(markdownContent, actions, getCache, createNodeId, reporter);
+                        const imageNode = await (0, imageProcessor_1.processBlocks)(markdownContent, actions, getCache, createNodeId, reporter);
+                        const gatsbyImageData = {
+                            childImageSharp: {
+                                gatsbyImageData: imageNode
+                                    ? `childImageSharp___NODE___${imageNode}`
+                                    : null,
+                            },
+                        };
                         const postNode = {
                             id: nodeId,
                             category: parentCategoryId,
@@ -149,7 +156,8 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             },
                             tags: tagIds,
                             parent: null,
-                            url: `${constants_1.COMMON_URI}/${constants_1.POST_URI}${categoryUrl}/${slug}`,
+                            url: `${constants_1.COMMON_URI}/${constants_1.POST_URI}${parentCategoryUrl}/${slug}`,
+                            thumbnail: imageNode,
                         };
                         await createNode(postNode);
                         // book과 post 부모-자식 관계 설정

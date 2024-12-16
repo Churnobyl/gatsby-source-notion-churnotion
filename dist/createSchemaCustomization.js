@@ -20,6 +20,7 @@ const createSchemaCustomization = ({ actions }) => {
             slug: String
             category_list: [${constants_1.NODE_TYPE.Category}]
             url: String!
+            thumbnail: File @link(by: "id", from: "thumbnail")
         }
         
         type ${constants_1.NODE_TYPE.Tag} implements Node {

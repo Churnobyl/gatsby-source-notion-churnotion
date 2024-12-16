@@ -32,7 +32,7 @@ export const getPages = async ({
     parentCategoryId: string | null = null,
     categoryPath: ICategory[] = [],
     tagMap: Record<string, string> = {},
-    categoryUrl: string = ``
+    parentCategoryUrl: string = ``
   ) => {
     let hasMore = true;
     try {
@@ -69,7 +69,7 @@ export const getPages = async ({
 
             const nodeId = createNodeId(`${categoryJsonData.id}-category`);
 
-            categoryUrl += `/${slug}`;
+            const categoryUrl = `${parentCategoryUrl}/${slug}`;
 
             const categoryNode: ICategory = {
               id: nodeId,
@@ -182,13 +182,21 @@ export const getPages = async ({
             const bookId = page.properties?.book?.relation?.[0]?.id || null;
             const markdownContent = await n2m.pageToMarkdown(page.id);
 
-            await processBlocks(
+            const imageNode = await processBlocks(
               markdownContent,
               actions,
               getCache,
               createNodeId,
               reporter
             );
+
+            const gatsbyImageData = {
+              childImageSharp: {
+                gatsbyImageData: imageNode
+                  ? `childImageSharp___NODE___${imageNode}`
+                  : null,
+              },
+            };
 
             const postNode: IPost = {
               id: nodeId,
@@ -213,7 +221,8 @@ export const getPages = async ({
               },
               tags: tagIds,
               parent: null,
-              url: `${COMMON_URI}/${POST_URI}${categoryUrl}/${slug}`,
+              url: `${COMMON_URI}/${POST_URI}${parentCategoryUrl}/${slug}`,
+              thumbnail: imageNode,
             };
 
             await createNode(postNode);

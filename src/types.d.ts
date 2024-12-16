@@ -9,6 +9,7 @@ import type {
   NodeInput,
   Reporter,
 } from "gatsby";
+import { FileSystemNode } from "gatsby-source-filesystem";
 import { MdBlock } from "notion-to-md/build/types";
 
 export interface IPost extends Node {
@@ -28,6 +29,7 @@ export interface IPost extends Node {
   internal: Node.Internal;
   children: [];
   url: string;
+  thumbnail: string | null;
 }
 
 export interface ITag extends Node {

@@ -21,6 +21,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             slug: String
             category_list: [${NODE_TYPE.Category}]
             url: String!
+            thumbnail: File @link(by: "id", from: "thumbnail")
         }
         
         type ${NODE_TYPE.Tag} implements Node {
