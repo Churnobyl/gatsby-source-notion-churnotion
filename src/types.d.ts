@@ -50,6 +50,7 @@ export interface ICategory extends Node {
   internal: Node.Internal;
   children: [];
   url: string;
+  books: string[];
 }
 
 export interface IBook extends Node {
@@ -59,6 +60,7 @@ export interface IBook extends Node {
   update_date: Date;
   internal: Node.Internal;
   url: string;
+  book_category: string | null;
 }
 
 export interface IPageFilter {
@@ -99,6 +101,7 @@ export interface IGetBooksParams {
     options?: ActionOptions
   ) => void | Promise<void>;
   createNodeId: (this: void, input: string) => string;
+  getNode: any;
 }
 
 export interface IAuthorInput {

@@ -7,7 +7,7 @@ exports.getBooks = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const constants_1 = require("../constants");
 const fetchData_1 = require("../util/fetchData");
-const getBooks = async ({ bookDatabaseId, reporter, createNode, createNodeId, }) => {
+const getBooks = async ({ bookDatabaseId, reporter, createNode, createNodeId, getNode, }) => {
     const databaseUrl = `databases/${bookDatabaseId}/query`;
     const body = {};
     const result = await (0, fetchData_1.fetchPostWithRetry)(databaseUrl, body);
@@ -18,6 +18,11 @@ const getBooks = async ({ bookDatabaseId, reporter, createNode, createNodeId, })
         reporter.info(`[CHECK] BOOK page: ${page.id}`);
         const nodeId = createNodeId(`${page.id}-book`);
         const slug = page.properties?.slug?.rich_text?.[0]?.plain_text || `unnamed-slug`;
+        const categoryId = page.properties?.category?.relation?.[0]?.id || null;
+        let book_category = null;
+        if (categoryId) {
+            book_category = createNodeId(`${categoryId}-category`);
+        }
         const bookNode = {
             id: nodeId,
             book_name: page.properties?.[`이름`]?.title?.[0]?.plain_text || `Unnamed`,
@@ -34,7 +39,9 @@ const getBooks = async ({ bookDatabaseId, reporter, createNode, createNodeId, })
             create_date: page.created_time,
             update_date: page.last_edited_time,
             url: `${constants_1.COMMON_URI}/${constants_1.BOOK_URI}/${slug}`,
+            book_category: book_category,
         };
+        reporter.info(`[DEBUG] Book ${bookNode.book_name} has book_category: ${bookNode.book_category}`);
         createNode(bookNode);
     }
 };

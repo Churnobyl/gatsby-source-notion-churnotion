@@ -30,7 +30,9 @@ export const sourceNodes: GatsbyNode["sourceNodes"] = async (
       reporter,
       createNode,
       createNodeId,
+      getNode,
     });
+
     await getPages({
       token,
       databaseId,

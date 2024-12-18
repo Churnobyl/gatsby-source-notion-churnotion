@@ -68,7 +68,6 @@ export const getPages = async ({
             }
 
             const nodeId = createNodeId(`${categoryJsonData.id}-category`);
-
             const categoryUrl = `${parentCategoryUrl}/${slug}`;
 
             const categoryNode: ICategory = {
@@ -85,8 +84,29 @@ export const getPages = async ({
                   .digest(`hex`),
               },
               url: `${COMMON_URI}/${CATEGORY_URI}${categoryUrl}`,
+              books: [],
             };
-            createNode(categoryNode);
+            await createNode(categoryNode);
+
+            // Find Book
+            const bookRelations = page.properties?.books?.relation || null;
+            if (bookRelations) {
+              bookRelations.forEach((relation: { id: string }) => {
+                const bookId = relation.id;
+                const bookNodeId = createNodeId(`${bookId}-book`);
+                const bookNode = getNode(bookNodeId);
+
+                if (bookNode) {
+                  createParentChildLink({
+                    parent: categoryNode,
+                    child: bookNode,
+                  });
+                  reporter.info(
+                    `[SUCCESS] Linked Category-Book: ${categoryNode.category_name} -> child: ${bookNode.book_name}`
+                  );
+                }
+              });
+            }
 
             if (parentCategoryId && categoryNode) {
               const parentNode = getNode(parentCategoryId); // Gatsby에서 노드를 검색

@@ -39,8 +39,9 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             category_name: String!
             slug: String!
             children: [${NODE_TYPE.Category}!]! @link(by: "parent")
-            churnotions: [${NODE_TYPE.Post}] @link(by: "book", from: "id")
+            churnotions: [${NODE_TYPE.Post}] @link(by: "category", from: "id")
             url: String!
+            books: [${NODE_TYPE.Book}] @link(by: "id", from: "books")
         }
 
         type ${NODE_TYPE.Book} implements Node {
@@ -50,6 +51,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             update_date: Date! @dateformat
             children: [${NODE_TYPE.Post}] @link(by: "book", from: "id")
             url: String!
+            book_category: ${NODE_TYPE.Category} @link(by: "id")
         }
     `);
   };

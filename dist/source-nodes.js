@@ -18,6 +18,7 @@ const sourceNodes = async (gatsbyApi, options) => {
             reporter,
             createNode,
             createNodeId,
+            getNode,
         });
         await (0, getPages_1.getPages)({
             token,
