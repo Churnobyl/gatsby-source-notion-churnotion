@@ -11,6 +11,40 @@ import type {
 } from "gatsby";
 import { FileSystemNode } from "gatsby-source-filesystem";
 import { MdBlock } from "notion-to-md/build/types";
+import { BaseBlock, BaseContentBlock } from "notion-types";
+
+export interface CustomImageBlock extends BaseContentBlock {
+  hash?: string;
+  type: "image";
+  image: {
+    rich_text: any;
+    caption: Array<{
+      type: "text";
+      text: {
+        content: string;
+        link: string | null;
+      };
+      plain_text: string;
+      href: string | null;
+    }>;
+    type: "file" | "external";
+    file?: {
+      url: string;
+      expiry_time: string;
+    };
+    external?: {
+      url: string;
+    };
+    fileId?: string;
+  };
+}
+
+export interface HeadingBlock extends BaseContentBlock {
+  type: "heading_1" | "heading_2" | "heading_3";
+  heading_1?: { rich_text: { plain_text: string }[] };
+  heading_2?: { rich_text: { plain_text: string }[] };
+  heading_3?: { rich_text: { plain_text: string }[] };
+}
 
 export interface IPost extends Node {
   id: string;
@@ -19,7 +53,8 @@ export interface IPost extends Node {
   book: IBook;
   book_index: number;
   title: string;
-  content: MdBlock[];
+  // content: MdBlock[];
+  content: BaseContentBlock[];
   create_date: Date;
   update_date: Date;
   version: number;

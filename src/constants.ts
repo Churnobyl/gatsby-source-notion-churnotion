@@ -8,6 +8,8 @@ export const NODE_TYPE = {
   Category: `NCategory`,
   Tag: `NTag`,
   Book: `NBook`,
+  Metadata: `NMetadata`,
+  RelatedPost: `RelatedPost`,
 };
 
 ///////////////url resource///////////////////////

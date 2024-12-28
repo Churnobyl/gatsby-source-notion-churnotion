@@ -52,7 +52,16 @@ exports.fetchPostWithRetry = fetchPostWithRetry;
 const fetchGetWithRetry = async (url, options = {}, tryCount = 0, maxRetries = 5) => {
     try {
         const response = await connector_1.instance.get(url);
-        // Return data if the request was successful
+        const results = response.data.results;
+        for (const block of results) {
+            if (block.has_children) {
+                block.children = [];
+                const pageUrl = `blocks/${block.id}/children?page_size=100`;
+                const childData = await (0, exports.fetchGetWithRetry)(pageUrl);
+                const childResults = childData.results;
+                block.children.push(...childResults);
+            }
+        }
         return response.data;
     }
     catch (error) {

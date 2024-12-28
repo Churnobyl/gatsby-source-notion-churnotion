@@ -7,9 +7,8 @@ exports.getPages = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const constants_1 = require("../constants");
 const fetchData_1 = require("../util/fetchData");
-const imageProcessor_1 = require("../util/imageProcessor");
 const slugify_1 = require("../util/slugify");
-const connector_1 = require("./connector");
+const processor_1 = require("../util/processor");
 const getPages = async ({ databaseId, reporter, getCache, actions, createNode, createNodeId, createParentChildLink, getNode, }) => {
     /**
      * 데이터베이스 내에 페이지들을 읽어서 재귀적으로 추가하는 서브 메서드드
@@ -27,7 +26,6 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                     reporter.info(`[SUCCESS] total pages > ${result.results.length}`);
                 }
                 for (const page of result.results) {
-                    reporter.info(`[CHECK] page: ${page.id}`);
                     const pageUrl = `blocks/${page.id}/children?page_size=100`;
                     // 페이지 데이터
                     const pageData = await (0, fetchData_1.fetchGetWithRetry)(pageUrl);
@@ -141,29 +139,23 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             });
                         }
                         const bookId = page.properties?.book?.relation?.[0]?.id || null;
-                        const markdownContent = await connector_1.n2m.pageToMarkdown(page.id);
-                        const imageNode = await (0, imageProcessor_1.processBlocks)(markdownContent, actions, getCache, createNodeId, reporter);
-                        const gatsbyImageData = {
-                            childImageSharp: {
-                                gatsbyImageData: imageNode
-                                    ? `childImageSharp___NODE___${imageNode}`
-                                    : null,
-                            },
-                        };
+                        const [imageNode, tableOfContents, updatedBlocks, rawText] = await (0, processor_1.processor)(pageData.results, actions, getCache, createNodeId, reporter);
                         const postNode = {
                             id: nodeId,
                             category: parentCategoryId,
                             book: getNode(`${bookId}-book`),
                             book_index: page.properties?.bookIndex?.number || 0,
                             title: title,
-                            content: markdownContent,
+                            content: updatedBlocks,
                             create_date: page.created_time,
                             update_date: page.last_edited_time,
                             version: page.properties?.version?.number || null,
-                            description: null,
+                            description: page.properties?.description?.rich_text?.[0]?.plain_text ||
+                                null,
                             slug: slug,
                             category_list: categoryPath,
                             children: [],
+                            tableOfContents,
                             internal: {
                                 type: constants_1.NODE_TYPE.Post,
                                 contentDigest: crypto_1.default
@@ -175,6 +167,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             parent: null,
                             url: `${constants_1.COMMON_URI}/${constants_1.POST_URI}${parentCategoryUrl}/${slug}`,
                             thumbnail: imageNode,
+                            rawText,
                         };
                         await createNode(postNode);
                         // book과 post 부모-자식 관계 설정

@@ -18,9 +18,11 @@ const createSchemaCustomization = ({ actions }) => {
             version: Int
             description: String
             slug: String
+            tableOfContents: [JSON]
             category_list: [${constants_1.NODE_TYPE.Category}]
             url: String!
             thumbnail: File @link(by: "id", from: "thumbnail")
+            rawText: String!
         }
         
         type ${constants_1.NODE_TYPE.Tag} implements Node {
@@ -51,6 +53,18 @@ const createSchemaCustomization = ({ actions }) => {
             children: [${constants_1.NODE_TYPE.Post}] @link(by: "book", from: "id")
             url: String!
             book_category: ${constants_1.NODE_TYPE.Category} @link(by: "id")
+        }
+
+        type ${constants_1.NODE_TYPE.Metadata} implements Node {
+            id: ID!,
+            title: String,
+            description: String,
+            image: String,
+            url: String,
+        }
+
+        type ${constants_1.NODE_TYPE.RelatedPost} implements Node {
+            posts: [${constants_1.NODE_TYPE.RelatedPost}]
         }
     `);
 };

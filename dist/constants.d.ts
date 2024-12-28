@@ -6,6 +6,8 @@ export declare const NODE_TYPE: {
     Category: string;
     Tag: string;
     Book: string;
+    Metadata: string;
+    RelatedPost: string;
 };
 export declare const COMMON_URI = "blog";
 export declare const POST_URI = "post";

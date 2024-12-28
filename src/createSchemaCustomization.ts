@@ -19,9 +19,11 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             version: Int
             description: String
             slug: String
+            tableOfContents: [JSON]
             category_list: [${NODE_TYPE.Category}]
             url: String!
             thumbnail: File @link(by: "id", from: "thumbnail")
+            rawText: String!
         }
         
         type ${NODE_TYPE.Tag} implements Node {
@@ -52,6 +54,18 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             children: [${NODE_TYPE.Post}] @link(by: "book", from: "id")
             url: String!
             book_category: ${NODE_TYPE.Category} @link(by: "id")
+        }
+
+        type ${NODE_TYPE.Metadata} implements Node {
+            id: ID!,
+            title: String,
+            description: String,
+            image: String,
+            url: String,
+        }
+
+        type ${NODE_TYPE.RelatedPost} implements Node {
+            posts: [${NODE_TYPE.RelatedPost}]
         }
     `);
   };

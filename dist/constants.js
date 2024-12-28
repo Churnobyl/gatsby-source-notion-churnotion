@@ -10,6 +10,8 @@ exports.NODE_TYPE = {
     Category: `NCategory`,
     Tag: `NTag`,
     Book: `NBook`,
+    Metadata: `NMetadata`,
+    RelatedPost: `RelatedPost`,
 };
 ///////////////url resource///////////////////////
 exports.COMMON_URI = `blog`;

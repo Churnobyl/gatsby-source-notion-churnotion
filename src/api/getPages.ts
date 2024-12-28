@@ -10,7 +10,9 @@ import { ICategory, IGetPagesParams, IPost, ITag } from "../types";
 import { fetchGetWithRetry, fetchPostWithRetry } from "../util/fetchData";
 import { processBlocks } from "../util/imageProcessor";
 import { slugify } from "../util/slugify";
-import { n2m } from "./connector";
+import { processTableOfContents } from "../util/tableOfContent";
+import { processMetadata } from "../util/metadataProcessor";
+import { processor } from "../util/processor";
 
 export const getPages = async ({
   databaseId,
@@ -47,8 +49,6 @@ export const getPages = async ({
         }
 
         for (const page of result.results) {
-          reporter.info(`[CHECK] page: ${page.id}`);
-
           const pageUrl = `blocks/${page.id}/children?page_size=100`;
 
           // 페이지 데이터
@@ -200,23 +200,15 @@ export const getPages = async ({
             }
 
             const bookId = page.properties?.book?.relation?.[0]?.id || null;
-            const markdownContent = await n2m.pageToMarkdown(page.id);
 
-            const imageNode = await processBlocks(
-              markdownContent,
-              actions,
-              getCache,
-              createNodeId,
-              reporter
-            );
-
-            const gatsbyImageData = {
-              childImageSharp: {
-                gatsbyImageData: imageNode
-                  ? `childImageSharp___NODE___${imageNode}`
-                  : null,
-              },
-            };
+            const [imageNode, tableOfContents, updatedBlocks, rawText] =
+              await processor(
+                pageData.results,
+                actions,
+                getCache,
+                createNodeId,
+                reporter
+              );
 
             const postNode: IPost = {
               id: nodeId,
@@ -224,14 +216,17 @@ export const getPages = async ({
               book: getNode(`${bookId}-book`),
               book_index: page.properties?.bookIndex?.number || 0,
               title: title,
-              content: markdownContent,
+              content: updatedBlocks,
               create_date: page.created_time,
               update_date: page.last_edited_time,
               version: page.properties?.version?.number || null,
-              description: null,
+              description:
+                page.properties?.description?.rich_text?.[0]?.plain_text ||
+                null,
               slug: slug,
               category_list: categoryPath,
               children: [],
+              tableOfContents,
               internal: {
                 type: NODE_TYPE.Post,
                 contentDigest: crypto
@@ -242,7 +237,8 @@ export const getPages = async ({
               tags: tagIds,
               parent: null,
               url: `${COMMON_URI}/${POST_URI}${parentCategoryUrl}/${slug}`,
-              thumbnail: imageNode,
+              thumbnail: imageNode as string | null,
+              rawText,
             };
 
             await createNode(postNode);
