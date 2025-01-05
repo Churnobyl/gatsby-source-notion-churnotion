@@ -8,11 +8,9 @@ import {
 } from "../constants";
 import { ICategory, IGetPagesParams, IPost, ITag } from "../types";
 import { fetchGetWithRetry, fetchPostWithRetry } from "../util/fetchData";
-import { processBlocks } from "../util/imageProcessor";
-import { slugify } from "../util/slugify";
-import { processTableOfContents } from "../util/tableOfContent";
-import { processMetadata } from "../util/metadataProcessor";
 import { processor } from "../util/processor";
+import { slugify } from "../util/slugify";
+import bookCategoryMap from "../util/bookCategoryMap";
 
 export const getPages = async ({
   databaseId,
@@ -23,6 +21,7 @@ export const getPages = async ({
   createNodeId,
   createParentChildLink,
   getNode,
+  cache,
 }: IGetPagesParams) => {
   /**
    * 데이터베이스 내에 페이지들을 읽어서 재귀적으로 추가하는 서브 메서드드
@@ -88,7 +87,6 @@ export const getPages = async ({
             };
             await createNode(categoryNode);
 
-            // Find Book
             const bookRelations = page.properties?.books?.relation || null;
             if (bookRelations) {
               bookRelations.forEach((relation: { id: string }) => {
@@ -101,6 +99,20 @@ export const getPages = async ({
                     parent: categoryNode,
                     child: bookNode,
                   });
+
+                  const updatedBookNode = {
+                    ...bookNode,
+                    book_category: categoryNode.id,
+                    internal: {
+                      type: bookNode.internal.type,
+                      contentDigest: crypto
+                        .createHash(`md5`)
+                        .update(JSON.stringify(bookNode))
+                        .digest(`hex`),
+                    },
+                  };
+                  createNode(updatedBookNode);
+
                   reporter.info(
                     `[SUCCESS] Linked Category-Book: ${categoryNode.category_name} -> child: ${bookNode.book_name}`
                   );
@@ -200,6 +212,8 @@ export const getPages = async ({
             }
 
             const bookId = page.properties?.book?.relation?.[0]?.id || null;
+            const bookNodeId = createNodeId(`${bookId}-book`);
+            const bookNode = getNode(bookNodeId);
 
             const [imageNode, tableOfContents, updatedBlocks, rawText] =
               await processor(
@@ -207,13 +221,14 @@ export const getPages = async ({
                 actions,
                 getCache,
                 createNodeId,
-                reporter
+                reporter,
+                cache
               );
 
             const postNode: IPost = {
               id: nodeId,
               category: parentCategoryId,
-              book: getNode(`${bookId}-book`),
+              book: bookNode?.id,
               book_index: page.properties?.bookIndex?.number || 0,
               title: title,
               content: updatedBlocks,
@@ -242,10 +257,6 @@ export const getPages = async ({
             };
 
             await createNode(postNode);
-
-            // book과 post 부모-자식 관계 설정
-            const bookNodeId = createNodeId(`${bookId}-book`);
-            const bookNode = getNode(bookNodeId);
 
             if (bookNode) {
               createParentChildLink({
@@ -302,4 +313,41 @@ export const getPages = async ({
   };
 
   await processDatabase(databaseId);
+
+  // Category - Book Relation Update
+  for (const [categoryId, bookIds] of bookCategoryMap.entries()) {
+    const categoryNode = getNode(categoryId);
+    if (categoryNode) {
+      for (const bookId of bookIds) {
+        const bookNode = getNode(bookId);
+        if (bookNode) {
+          createParentChildLink({
+            parent: categoryNode,
+            child: bookNode,
+          });
+
+          const updatedBookNode = {
+            ...bookNode,
+            book_category: categoryNode.id,
+            internal: {
+              type: bookNode.internal.type,
+              contentDigest: crypto
+                .createHash(`md5`)
+                .update(JSON.stringify(bookNode))
+                .digest(`hex`),
+            },
+          };
+          createNode(updatedBookNode);
+
+          reporter.info(
+            `[SUCCESS] Linked Book to Category: ${bookNode.book_name} -> ${categoryNode.category_name}`
+          );
+        } else {
+          reporter.warn(`[WARNING] Book node not found: ${bookId}`);
+        }
+      }
+    } else {
+      reporter.warn(`[WARNING] Category node not found: ${categoryId}`);
+    }
+  }
 };

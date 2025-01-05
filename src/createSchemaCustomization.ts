@@ -43,7 +43,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             children: [${NODE_TYPE.Category}!]! @link(by: "parent")
             churnotions: [${NODE_TYPE.Post}] @link(by: "category", from: "id")
             url: String!
-            books: [${NODE_TYPE.Book}] @link(by: "id", from: "books")
+            books: [${NODE_TYPE.Book}] @link(by: "id")
         }
 
         type ${NODE_TYPE.Book} implements Node {
@@ -53,7 +53,8 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             update_date: Date! @dateformat
             children: [${NODE_TYPE.Post}] @link(by: "book", from: "id")
             url: String!
-            book_category: ${NODE_TYPE.Category} @link(by: "id")
+            book_category: ${NODE_TYPE.Category} @link(by: "id", from: "book_category")
+            book_image: File @link(by: "id", from: "book_image")
         }
 
         type ${NODE_TYPE.Metadata} implements Node {

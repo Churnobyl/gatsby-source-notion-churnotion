@@ -7,9 +7,10 @@ exports.getPages = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const constants_1 = require("../constants");
 const fetchData_1 = require("../util/fetchData");
-const slugify_1 = require("../util/slugify");
 const processor_1 = require("../util/processor");
-const getPages = async ({ databaseId, reporter, getCache, actions, createNode, createNodeId, createParentChildLink, getNode, }) => {
+const slugify_1 = require("../util/slugify");
+const bookCategoryMap_1 = __importDefault(require("../util/bookCategoryMap"));
+const getPages = async ({ databaseId, reporter, getCache, actions, createNode, createNodeId, createParentChildLink, getNode, cache, }) => {
     /**
      * 데이터베이스 내에 페이지들을 읽어서 재귀적으로 추가하는 서브 메서드드
      * @param databaseId 데이터베이스 아이디
@@ -55,7 +56,6 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             books: [],
                         };
                         await createNode(categoryNode);
-                        // Find Book
                         const bookRelations = page.properties?.books?.relation || null;
                         if (bookRelations) {
                             bookRelations.forEach((relation) => {
@@ -67,6 +67,18 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                                         parent: categoryNode,
                                         child: bookNode,
                                     });
+                                    const updatedBookNode = {
+                                        ...bookNode,
+                                        book_category: categoryNode.id,
+                                        internal: {
+                                            type: bookNode.internal.type,
+                                            contentDigest: crypto_1.default
+                                                .createHash(`md5`)
+                                                .update(JSON.stringify(bookNode))
+                                                .digest(`hex`),
+                                        },
+                                    };
+                                    createNode(updatedBookNode);
                                     reporter.info(`[SUCCESS] Linked Category-Book: ${categoryNode.category_name} -> child: ${bookNode.book_name}`);
                                 }
                             });
@@ -139,11 +151,13 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             });
                         }
                         const bookId = page.properties?.book?.relation?.[0]?.id || null;
-                        const [imageNode, tableOfContents, updatedBlocks, rawText] = await (0, processor_1.processor)(pageData.results, actions, getCache, createNodeId, reporter);
+                        const bookNodeId = createNodeId(`${bookId}-book`);
+                        const bookNode = getNode(bookNodeId);
+                        const [imageNode, tableOfContents, updatedBlocks, rawText] = await (0, processor_1.processor)(pageData.results, actions, getCache, createNodeId, reporter, cache);
                         const postNode = {
                             id: nodeId,
                             category: parentCategoryId,
-                            book: getNode(`${bookId}-book`),
+                            book: bookNode?.id,
                             book_index: page.properties?.bookIndex?.number || 0,
                             title: title,
                             content: updatedBlocks,
@@ -170,9 +184,6 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             rawText,
                         };
                         await createNode(postNode);
-                        // book과 post 부모-자식 관계 설정
-                        const bookNodeId = createNodeId(`${bookId}-book`);
-                        const bookNode = getNode(bookNodeId);
                         if (bookNode) {
                             createParentChildLink({
                                 parent: bookNode,
@@ -219,5 +230,39 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
         }
     };
     await processDatabase(databaseId);
+    // Category - Book Relation Update
+    for (const [categoryId, bookIds] of bookCategoryMap_1.default.entries()) {
+        const categoryNode = getNode(categoryId);
+        if (categoryNode) {
+            for (const bookId of bookIds) {
+                const bookNode = getNode(bookId);
+                if (bookNode) {
+                    createParentChildLink({
+                        parent: categoryNode,
+                        child: bookNode,
+                    });
+                    const updatedBookNode = {
+                        ...bookNode,
+                        book_category: categoryNode.id,
+                        internal: {
+                            type: bookNode.internal.type,
+                            contentDigest: crypto_1.default
+                                .createHash(`md5`)
+                                .update(JSON.stringify(bookNode))
+                                .digest(`hex`),
+                        },
+                    };
+                    createNode(updatedBookNode);
+                    reporter.info(`[SUCCESS] Linked Book to Category: ${bookNode.book_name} -> ${categoryNode.category_name}`);
+                }
+                else {
+                    reporter.warn(`[WARNING] Book node not found: ${bookId}`);
+                }
+            }
+        }
+        else {
+            reporter.warn(`[WARNING] Category node not found: ${categoryId}`);
+        }
+    }
 };
 exports.getPages = getPages;

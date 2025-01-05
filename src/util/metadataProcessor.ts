@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { Actions, Reporter } from "gatsby";
+import { Actions, GatsbyCache, Reporter } from "gatsby";
 import metascraper from "metascraper";
 import metascraperDescription from "metascraper-description";
 import metascraperImage from "metascraper-image";
@@ -18,7 +18,8 @@ export const processMetadata = async (
   blocks: any[],
   actions: Actions,
   createNodeId: (input: string) => string,
-  reporter: Reporter
+  reporter: Reporter,
+  cache: GatsbyCache
 ) => {
   const { createNode } = actions;
 
@@ -38,6 +39,21 @@ export const processMetadata = async (
 
         if (href) {
           try {
+            reporter.info(`[INFO] Processing metadata for URL: ${href}`);
+
+            const cacheKey = `metadata-${crypto
+              .createHash("md5")
+              .update(href)
+              .digest("hex")}`;
+
+            const cachedMetadata = await cache.get(cacheKey);
+
+            if (cachedMetadata) {
+              reporter.info(`[INFO] Using cached metadata for URL: ${href}`);
+              text.href = cachedMetadata.nodeId;
+              continue;
+            }
+
             reporter.info(`[INFO] Fetching metadata for URL: ${href}`);
             const response = await fetch(href, {
               headers: { "User-Agent": "Mozilla/5.0" },
@@ -48,6 +64,7 @@ export const processMetadata = async (
             const nodeId = createNodeId(
               `${crypto.createHash("md5").update(href).digest("hex")}-metadata`
             );
+
             const metadataNode = {
               id: nodeId,
               parent: null,
@@ -66,7 +83,10 @@ export const processMetadata = async (
             };
 
             createNode(metadataNode);
+
             reporter.info(`[SUCCESS] Created metadata node for URL: ${href}`);
+
+            await cache.set(cacheKey, { ...metadata, nodeId });
 
             text.href = nodeId;
           } catch (error: unknown) {

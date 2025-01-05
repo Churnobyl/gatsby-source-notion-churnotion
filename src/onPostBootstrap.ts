@@ -1,123 +1,177 @@
-// import { GatsbyNode } from "gatsby";
-// import { TfIdf, TfIdfTerm } from "natural";
-// import { NODE_TYPE } from "./constants";
-// import crypto from "crypto";
+import crypto from "crypto";
+import { GatsbyNode } from "gatsby";
+import { TfIdf, TfIdfTerm } from "natural";
+import { NODE_TYPE } from "./constants";
+import { IPost, ISourceNodesOptions } from "./types";
 
-// const md5 = (str: string): string => {
-//   const md5 = crypto.createHash("md5");
-//   return md5.update(str, "binary").digest("hex");
-// };
+import computeCosineSimilarity from "compute-cosine-similarity";
 
-// const getSpaceSeparatedDoc: {
-//     [key: string]: (doc: string) => Promise<string[]>;
-//   } = {
-//     en: async (doc) => {
-//       return doc.toLowerCase().split(' ');
-//     },
-//     ja: async (doc) => {
-//       if (kuromoji_tokenizer === null)
-//         kuromoji_tokenizer = await getKuromojiTokenizer();
+const vector_similarity_memo = new Map<string, number>();
 
-//       return kuromoji_tokenizer
-//         .tokenize(doc)
-//         .filter(
-//           (x) =>
-//             x.pos === '名詞' &&
-//             ['一般', '固有名詞'].indexOf(x.pos_detail_1) !== -1
-//         )
-//         .map((x) => (x.basic_form !== '*' ? x.basic_form : x.surface_form));
-//     },
-//   };
+type BowVector = number[];
 
-// export const onPostBootstrap: GatsbyNode["onPostBootstrap"] = async ({
-//   actions,
-//   getNode,
-//   getNodesByType,
-//   createNodeId,
-//   reporter,
-//   cache,
-// }) => {
-//   const nodes = getNodesByType(NODE_TYPE.Post);
+type VectorWithId = {
+  id: string;
+  vector: BowVector;
+};
 
-//   const docs: Record<string, string>[] = nodes.map((node) => ({
-//     id: node.id,
-//     text: node.rawText as string,
-//   }));
+const md5 = (str: string): string => {
+  const md5 = crypto.createHash("md5");
+  return md5.update(str, "binary").digest("hex");
+};
 
-//   const tfidf = new TfIdf();
-//   for (let doc of docs) {
-//     const key = `${md5(doc.text)}-related-post`;
+const getMemorizedVectorSimilarity = (
+  v1: VectorWithId,
+  v2: VectorWithId
+): number => {
+  const id = v1.id < v2.id ? `${v1.id} ${v2.id}` : `${v2.id} ${v1.id}`;
 
-//     const cached_ssd = await cache.get(key);
-//     if (cached_ssd !== undefined) {
-//       tfidf.addDocument(cached_ssd);
-//       continue;
-//     }
+  const memorized_similarity = vector_similarity_memo.get(id);
+  if (memorized_similarity !== undefined) return memorized_similarity;
 
-//     const ssd = await getSpaceSeparatedDoc[option.doc_lang](
-//       getTextFromMarkdown(doc.text)
-//     );
-//     tfidf.addDocument(ssd);
-//     await cache.set(key, ssd);
-//   }
+  const similarity = calcVectorSimilarity(v1.vector, v2.vector);
+  vector_similarity_memo.set(id, similarity);
 
-//   // generate bow vectors
-//   type Term = TfIdfTerm & {
-//     tf: number;
-//     idf: number;
-//   };
-//   //// extract keywords from each document
-//   const doc_terms = docs.map((_, i) =>
-//     (tfidf.listTerms(i) as Term[])
-//       .map((x) => ({ ...x, tfidf: (x as Term).tf * (x as Term).idf }))
-//       .sort((x, y) => y.tfidf - x.tfidf)
-//   );
-//   // DEBUG: print terms
-//   // doc_terms.forEach((x, i) =>
-//   //  console.log(
-//   //    docs[i].id,
-//   //    x.map((x) => x.term)
-//   //  )
-//   //);
-//   const all_keywords = new Set<string>();
-//   const tfidf_map_for_each_doc: Map<string, number>[] = [];
-//   doc_terms.forEach((x, i) => {
-//     tfidf_map_for_each_doc[i] = new Map<string, number>();
-//     x.slice(0, option.each_bow_size).forEach((x) => {
-//       all_keywords.add(x.term);
-//       tfidf_map_for_each_doc[i].set(x.term, x.tfidf);
-//     });
-//   });
-//   //// generate vectors
-//   const bow_vectors = new Map<string, BowVector>();
-//   docs.forEach((x, i) => {
-//     if (bow_vectors === null) return;
-//     bow_vectors.set(
-//       x.id,
-//       Array.from(all_keywords)
-//         .map((x) => tfidf_map_for_each_doc[i].get(x))
-//         .map((x) => (x === undefined ? 0 : x))
-//     );
-//   });
-//   reporter.info(
-//     `[related-posts] bow vectors generated, dimention: ${all_keywords.size}`
-//   );
+  return similarity;
+};
 
-//   // create related nodes
-//   nodes.forEach((node) => {
-//     const related_nodes = getRelatedPosts(node.id, bow_vectors)
-//       .slice(1)
-//       .map((id) => getNode(id));
-//     const digest = `${node.id} >>> related${option.target_node}s`;
+const calcVectorSimilarity = (v1: BowVector, v2: BowVector): number => {
+  if (v1.length !== v2.length)
+    throw new Error("Both vector's size must be equal");
 
-//     actions.createNode({
-//       id: createNodeId(digest),
-//       parent: node.id,
-//       internal: {
-//         type: `related${option.target_node}s`,
-//         contentDigest: digest,
-//       },
-//       posts: related_nodes,
-//     });
-//   });
-// };
+  return computeCosineSimilarity(v1, v2) || 0;
+};
+
+const getRelatedPosts = (
+  id: string,
+  bow_vectors: Map<string, BowVector>
+): string[] => {
+  const vector = bow_vectors.get(id);
+  if (vector === undefined) return [];
+
+  const vector_node: VectorWithId = {
+    id,
+    vector,
+  };
+
+  return Array.from(bow_vectors.entries())
+    .sort((x, y) => {
+      const vector_x: VectorWithId = {
+        id: x[0],
+        vector: x[1],
+      };
+      const vector_y: VectorWithId = {
+        id: y[0],
+        vector: y[1],
+      };
+
+      return (
+        getMemorizedVectorSimilarity(vector_y, vector_node) -
+        getMemorizedVectorSimilarity(vector_x, vector_node)
+      );
+    })
+    .map((x) => x[0]);
+};
+
+const getTextFromRawText = async (doc: string) => {
+  return doc
+    .replace(/http[^ ]+/g, "")
+    .replace(/[\#\!\(\)\*\_\[\]\|\=\>\+\`\:\-]/g, "");
+};
+
+const getSpaceSeparatedDoc = async (doc: string) => {
+  return "";
+};
+
+export const onPostBootstrap: GatsbyNode[`onPostBootstrap`] = async (
+  { actions, getNode, getNodesByType, createNodeId, reporter, cache },
+  options: ISourceNodesOptions
+) => {
+  const { etriToken } = options;
+
+  if (etriToken === "") {
+    reporter.info("[Related Post] Skip getting related post logic.");
+    return;
+  }
+
+  const nodes = getNodesByType(NODE_TYPE.Post) as IPost[];
+
+  const docs = nodes.map((node) => ({
+    id: node.id,
+    text: node.rawText,
+  }));
+
+  const tfidf = new TfIdf();
+
+  // tfidf
+  docs.map(async (doc) => {
+    if (doc.text) {
+      const key = `${md5(doc.text)}-doc`;
+
+      const cached_ssd = await cache.get(key);
+      if (cached_ssd !== undefined) {
+        tfidf.addDocument(cached_ssd);
+      } else {
+        const ssd = await getSpaceSeparatedDoc(
+          await getTextFromRawText(doc.text)
+        );
+        tfidf.addDocument(ssd);
+        await cache.set(key, ssd);
+      }
+    }
+  });
+
+  // generate bow vectors
+  type Term = TfIdfTerm & {
+    tf: number;
+    idf: number;
+  };
+
+  //
+  const doc_terms = docs.map((_, i) =>
+    (tfidf.listTerms(i) as Term[])
+      .map((x) => ({ ...x, tfidf: (x as Term).tf * (x as Term).idf }))
+      .sort((x, y) => y.tfidf - x.tfidf)
+  );
+
+  const all_keywords = new Set<string>();
+  const tfidf_map_for_each_doc: Map<string, number>[] = [];
+  doc_terms.forEach((x, i) => {
+    tfidf_map_for_each_doc[i] = new Map<string, number>();
+    x.slice(0, 30).forEach((x) => {
+      all_keywords.add(x.term);
+      tfidf_map_for_each_doc[i].set(x.term, x.tfidf);
+    });
+  });
+
+  const bow_vectors = new Map<string, BowVector>();
+  docs.forEach((x, i) => {
+    if (bow_vectors === null) return;
+    bow_vectors.set(
+      x.id,
+      Array.from(all_keywords)
+        .map((x) => tfidf_map_for_each_doc[i].get(x))
+        .map((x) => (x === undefined ? 0 : x))
+    );
+  });
+  reporter.info(
+    `[related-posts] bow vectors generated, dimention: ${all_keywords.size}`
+  );
+
+  nodes.forEach((node) => {
+    const related_nodes = getRelatedPosts(node.id, bow_vectors)
+      .slice(1)
+      .map((id) => getNode(id));
+    const digest = `${node.id} - ${NODE_TYPE.RelatedPost}`;
+
+    actions.createNode({
+      id: createNodeId(digest),
+      parent: node.id,
+      internal: {
+        type: `related${NODE_TYPE.RelatedPost}s`,
+        contentDigest: digest,
+      },
+      posts: related_nodes,
+    });
+  });
+};

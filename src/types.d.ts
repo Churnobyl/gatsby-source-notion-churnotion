@@ -7,11 +7,17 @@ import type {
   IPluginRefOptions,
   Node,
   NodeInput,
+  PluginOptions,
   Reporter,
 } from "gatsby";
-import { FileSystemNode } from "gatsby-source-filesystem";
-import { MdBlock } from "notion-to-md/build/types";
-import { BaseBlock, BaseContentBlock } from "notion-types";
+import { BaseContentBlock } from "notion-types";
+
+export interface ISourceNodesOptions extends PluginOptions {
+  token: string;
+  databaseId: string;
+  bookDatabaseId: string;
+  etriToken: string;
+}
 
 export interface CustomImageBlock extends BaseContentBlock {
   hash?: string;
@@ -50,7 +56,7 @@ export interface IPost extends Node {
   id: string;
   category: tags;
   tags: string[];
-  book: IBook;
+  book: string;
   book_index: number;
   title: string;
   // content: MdBlock[];
@@ -65,6 +71,7 @@ export interface IPost extends Node {
   children: [];
   url: string;
   thumbnail: string | null;
+  rawText?: string;
 }
 
 export interface ITag extends Node {
@@ -124,11 +131,13 @@ export interface IGetPagesParams {
   createNodeId: (this: void, input: string) => string;
   createParentChildLink: any;
   getNode: any;
+  cache: GatsbyCache;
 }
 
 export interface IGetBooksParams {
   bookDatabaseId: string;
   reporter: Reporter;
+  getCache: (this: void, id: string) => GatsbyCache;
   createNode: (
     this: void,
     node: NodeInput,
@@ -137,6 +146,7 @@ export interface IGetBooksParams {
   ) => void | Promise<void>;
   createNodeId: (this: void, input: string) => string;
   getNode: any;
+  cache: GatsbyCache;
 }
 
 export interface IAuthorInput {

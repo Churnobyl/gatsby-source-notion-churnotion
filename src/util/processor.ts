@@ -10,7 +10,8 @@ export const processor = async (
   actions: Actions,
   getCache: (this: void, id: string) => GatsbyCache,
   createNodeId: (this: void, input: string) => string,
-  reporter: Reporter
+  reporter: Reporter,
+  cache: GatsbyCache
 ): Promise<
   [
     string | null,
@@ -25,10 +26,11 @@ export const processor = async (
       actions,
       getCache,
       createNodeId,
-      reporter
+      reporter,
+      cache
     );
 
-  await processMetadata(blocks, actions, createNodeId, reporter);
+  await processMetadata(blocks, actions, createNodeId, reporter, cache);
 
   return [thumbnail, tableOfContents, updatedBlocks, rawText];
 };
@@ -38,7 +40,8 @@ const processBlocksForContent = async (
   actions: Actions,
   getCache: (this: void, id: string) => GatsbyCache,
   createNodeId: (this: void, input: string) => string,
-  reporter: Reporter
+  reporter: Reporter,
+  cache: GatsbyCache
 ) => {
   const tableOfContents: { type: string; hash: string; title: string }[] = [];
   let thumbnail: string | null = null;
@@ -60,7 +63,8 @@ const processBlocksForContent = async (
             actions,
             getCache,
             createNodeId,
-            reporter
+            reporter,
+            cache
           );
 
           if (!thumbnail && updatedBlock?.image?.fileId) {
@@ -87,7 +91,9 @@ const isTextContentBlock = (
     | "heading_3"
     | "quote"
     | "bulleted_list_item"
-    | "numbered_list_item"]?: {
+    | "numbered_list_item"
+    | "callout"
+    | "code"]?: {
     rich_text: { plain_text: string }[];
   };
 } => {
@@ -99,13 +105,21 @@ const isTextContentBlock = (
     "quote",
     "bulleted_list_item",
     "numbered_list_item",
+    "callout",
+    "code",
   ].includes(block.type);
 };
 
 const extractPlainText = (block: BaseContentBlock): string | null => {
   if (isTextContentBlock(block)) {
     const richTextArray = (block as any)[block.type]?.rich_text || [];
-    return richTextArray.map((text: any) => text.plain_text).join(" ");
+    return richTextArray
+      .map((text: any) =>
+        block.type === "code" // code의 \n 제거
+          ? text.plain_text.replace(/\\n/g, "")
+          : text.plain_text
+      )
+      .join(" ");
   }
   return null;
 };
@@ -119,7 +133,8 @@ const processImageBlock = async (
   actions: Actions,
   getCache: (this: void, id: string) => GatsbyCache,
   createNodeId: (this: void, input: string) => string,
-  reporter: Reporter
+  reporter: Reporter,
+  cache: GatsbyCache
 ) => {
   const { createNode } = actions;
 
@@ -131,6 +146,22 @@ const processImageBlock = async (
         : block.image?.file?.url;
 
     if (!imageUrl) return null;
+
+    const cacheKey = `${imageUrl}-post-image`;
+    const cachedFileNodeId = await cache.get(cacheKey);
+
+    if (cachedFileNodeId) {
+      reporter.info(`[CACHE HIT] Image already processed: ${imageUrl}`);
+      const updatedBlock = {
+        ...block,
+        image: {
+          fileId: cachedFileNodeId,
+          caption: block.image.caption,
+        },
+      } as CustomImageBlock;
+
+      return updatedBlock;
+    }
 
     try {
       const fileNode = await createRemoteFileNode({
@@ -151,6 +182,8 @@ const processImageBlock = async (
         } as CustomImageBlock;
 
         reporter.info(`[SUCCESS] Image processed: ${fileNode.id}`);
+
+        await cache.set(cacheKey, fileNode.id);
 
         return updatedBlock;
       }

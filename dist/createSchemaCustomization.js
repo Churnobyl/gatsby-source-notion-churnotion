@@ -42,7 +42,7 @@ const createSchemaCustomization = ({ actions }) => {
             children: [${constants_1.NODE_TYPE.Category}!]! @link(by: "parent")
             churnotions: [${constants_1.NODE_TYPE.Post}] @link(by: "category", from: "id")
             url: String!
-            books: [${constants_1.NODE_TYPE.Book}] @link(by: "id", from: "books")
+            books: [${constants_1.NODE_TYPE.Book}] @link(by: "id")
         }
 
         type ${constants_1.NODE_TYPE.Book} implements Node {
@@ -52,7 +52,8 @@ const createSchemaCustomization = ({ actions }) => {
             update_date: Date! @dateformat
             children: [${constants_1.NODE_TYPE.Post}] @link(by: "book", from: "id")
             url: String!
-            book_category: ${constants_1.NODE_TYPE.Category} @link(by: "id")
+            book_category: ${constants_1.NODE_TYPE.Category} @link(by: "id", from: "book_category")
+            book_image: File @link(by: "id", from: "book_image")
         }
 
         type ${constants_1.NODE_TYPE.Metadata} implements Node {

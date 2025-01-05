@@ -1,18 +1,14 @@
 import type { GatsbyNode, PluginOptions } from "gatsby";
 import { getPages } from "./api/getPages";
 import { getBooks } from "./api/getBooks";
-
-interface ISourceNodesOptions extends PluginOptions {
-  token: string;
-  databaseId: string;
-  bookDatabaseId: string;
-}
+import { ISourceNodesOptions } from "./types";
 
 export const sourceNodes: GatsbyNode["sourceNodes"] = async (
   gatsbyApi,
   options: ISourceNodesOptions
 ) => {
-  const { actions, reporter, createNodeId, getNode, getCache } = gatsbyApi;
+  const { actions, reporter, createNodeId, getNode, getCache, cache } =
+    gatsbyApi;
   const { createNode, createParentChildLink } = actions;
 
   const { token, databaseId, bookDatabaseId } = options;
@@ -28,9 +24,11 @@ export const sourceNodes: GatsbyNode["sourceNodes"] = async (
     await getBooks({
       bookDatabaseId,
       reporter,
+      getCache,
       createNode,
       createNodeId,
       getNode,
+      cache,
     });
 
     await getPages({
@@ -43,6 +41,7 @@ export const sourceNodes: GatsbyNode["sourceNodes"] = async (
       createNodeId,
       createParentChildLink,
       getNode,
+      cache,
     });
   } catch (e) {
     reporter.error(`[ERROR] ${e}`);

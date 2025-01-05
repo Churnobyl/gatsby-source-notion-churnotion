@@ -4,7 +4,7 @@ exports.sourceNodes = void 0;
 const getPages_1 = require("./api/getPages");
 const getBooks_1 = require("./api/getBooks");
 const sourceNodes = async (gatsbyApi, options) => {
-    const { actions, reporter, createNodeId, getNode, getCache } = gatsbyApi;
+    const { actions, reporter, createNodeId, getNode, getCache, cache } = gatsbyApi;
     const { createNode, createParentChildLink } = actions;
     const { token, databaseId, bookDatabaseId } = options;
     if (!token || !databaseId) {
@@ -16,9 +16,11 @@ const sourceNodes = async (gatsbyApi, options) => {
         await (0, getBooks_1.getBooks)({
             bookDatabaseId,
             reporter,
+            getCache,
             createNode,
             createNodeId,
             getNode,
+            cache,
         });
         await (0, getPages_1.getPages)({
             token,
@@ -30,6 +32,7 @@ const sourceNodes = async (gatsbyApi, options) => {
             createNodeId,
             createParentChildLink,
             getNode,
+            cache,
         });
     }
     catch (e) {

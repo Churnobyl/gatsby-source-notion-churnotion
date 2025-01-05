@@ -7,3 +7,4 @@ var source_nodes_1 = require("./source-nodes");
 Object.defineProperty(exports, "sourceNodes", { enumerable: true, get: function () { return source_nodes_1.sourceNodes; } });
 var createSchemaCustomization_1 = require("./createSchemaCustomization");
 Object.defineProperty(exports, "createSchemaCustomization", { enumerable: true, get: function () { return createSchemaCustomization_1.createSchemaCustomization; } });
+// export { onPostBootstrap } from "./onPostBootstrap";
