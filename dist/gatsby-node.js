@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createSchemaCustomization = exports.sourceNodes = exports.onPluginInit = void 0;
+exports.onPostBootstrap = exports.createSchemaCustomization = exports.sourceNodes = exports.onPluginInit = void 0;
 var onPluginInit_1 = require("./onPluginInit");
 Object.defineProperty(exports, "onPluginInit", { enumerable: true, get: function () { return onPluginInit_1.onPluginInit; } });
 var source_nodes_1 = require("./source-nodes");
 Object.defineProperty(exports, "sourceNodes", { enumerable: true, get: function () { return source_nodes_1.sourceNodes; } });
 var createSchemaCustomization_1 = require("./createSchemaCustomization");
 Object.defineProperty(exports, "createSchemaCustomization", { enumerable: true, get: function () { return createSchemaCustomization_1.createSchemaCustomization; } });
-// export { onPostBootstrap } from "./onPostBootstrap";
+var onPostBootstrap_1 = require("./onPostBootstrap");
+Object.defineProperty(exports, "onPostBootstrap", { enumerable: true, get: function () { return onPostBootstrap_1.onPostBootstrap; } });

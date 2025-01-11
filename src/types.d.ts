@@ -16,7 +16,6 @@ export interface ISourceNodesOptions extends PluginOptions {
   token: string;
   databaseId: string;
   bookDatabaseId: string;
-  etriToken: string;
 }
 
 export interface CustomImageBlock extends BaseContentBlock {

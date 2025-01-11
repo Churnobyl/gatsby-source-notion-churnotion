@@ -54,6 +54,7 @@ const createSchemaCustomization = ({ actions }) => {
             url: String!
             book_category: ${constants_1.NODE_TYPE.Category} @link(by: "id", from: "book_category")
             book_image: File @link(by: "id", from: "book_image")
+            description: String!
         }
 
         type ${constants_1.NODE_TYPE.Metadata} implements Node {

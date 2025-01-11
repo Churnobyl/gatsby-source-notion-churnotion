@@ -5,6 +5,19 @@ import { NODE_TYPE } from "./constants";
 import { IPost, ISourceNodesOptions } from "./types";
 
 import computeCosineSimilarity from "compute-cosine-similarity";
+import { NlpManager } from "node-nlp";
+
+const manager = new NlpManager({ languages: ["ko"] });
+
+const getTokens = async (doc: string): Promise<string[]> => {
+  const result = await manager.process("ko", doc);
+  if (!result.entities) {
+    return [];
+  }
+  return result.entities
+    .map((entity) => entity.utteranceText)
+    .filter((text) => text.length > 1);
+};
 
 const vector_similarity_memo = new Map<string, number>();
 
@@ -55,6 +68,7 @@ const getRelatedPosts = (
   };
 
   return Array.from(bow_vectors.entries())
+    .filter(([otherId]) => otherId !== id)
     .sort((x, y) => {
       const vector_x: VectorWithId = {
         id: x[0],
@@ -70,7 +84,8 @@ const getRelatedPosts = (
         getMemorizedVectorSimilarity(vector_x, vector_node)
       );
     })
-    .map((x) => x[0]);
+    .map((x) => x[0])
+    .slice(0, 5);
 };
 
 const getTextFromRawText = async (doc: string) => {
@@ -79,27 +94,23 @@ const getTextFromRawText = async (doc: string) => {
     .replace(/[\#\!\(\)\*\_\[\]\|\=\>\+\`\:\-]/g, "");
 };
 
-const getSpaceSeparatedDoc = async (doc: string) => {
-  return "";
+const getSpaceSeparatedDoc = async (doc: string): Promise<string> => {
+  if (!doc.trim()) {
+    return "";
+  }
+  const tokens = await getTokens(doc);
+  return tokens.join(" ");
 };
 
 export const onPostBootstrap: GatsbyNode[`onPostBootstrap`] = async (
   { actions, getNode, getNodesByType, createNodeId, reporter, cache },
   options: ISourceNodesOptions
 ) => {
-  const { etriToken } = options;
-
-  if (etriToken === "") {
-    reporter.info("[Related Post] Skip getting related post logic.");
-    return;
-  }
-
   const nodes = getNodesByType(NODE_TYPE.Post) as IPost[];
 
-  const docs = nodes.map((node) => ({
-    id: node.id,
-    text: node.rawText,
-  }));
+  const docs = nodes
+    .map((node) => ({ id: node.id, text: node.rawText }))
+    .filter((doc) => doc.text?.trim() !== "");
 
   const tfidf = new TfIdf();
 

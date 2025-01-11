@@ -55,6 +55,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             url: String!
             book_category: ${NODE_TYPE.Category} @link(by: "id", from: "book_category")
             book_image: File @link(by: "id", from: "book_image")
+            description: String!
         }
 
         type ${NODE_TYPE.Metadata} implements Node {

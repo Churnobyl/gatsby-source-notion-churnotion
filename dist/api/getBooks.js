@@ -41,6 +41,7 @@ const getBooks = async ({ bookDatabaseId, reporter, getCache, createNode, create
             bookCategoryMap_1.default.get(bookCategoryId).push(nodeId);
         }
         const bookImage = page.properties?.bookImage?.files?.[0]?.file.url;
+        const description = page.properties?.description?.rich_text?.[0]?.plain_text;
         const bookImageNode = await (0, gatsby_source_filesystem_1.createRemoteFileNode)({
             url: bookImage,
             parentNodeId: page.id,
@@ -66,6 +67,7 @@ const getBooks = async ({ bookDatabaseId, reporter, getCache, createNode, create
             url: `${constants_1.COMMON_URI}/${constants_1.BOOK_URI}/${slug}`,
             book_category: book_category,
             book_image: bookImageNode.id,
+            description: description,
         };
         reporter.info(`[DEBUG] Book ${bookNode.book_name} has book_category: ${bookNode.book_category}`);
         createNode(bookNode);

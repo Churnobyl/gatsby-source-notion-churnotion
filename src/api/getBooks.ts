@@ -56,6 +56,8 @@ export const getBooks = async ({
     }
 
     const bookImage = page.properties?.bookImage?.files?.[0]?.file.url;
+    const description =
+      page.properties?.description?.rich_text?.[0]?.plain_text;
 
     const bookImageNode = await createRemoteFileNode({
       url: bookImage,
@@ -83,6 +85,7 @@ export const getBooks = async ({
       url: `${COMMON_URI}/${BOOK_URI}/${slug}`,
       book_category: book_category,
       book_image: bookImageNode.id,
+      description: description,
     };
     reporter.info(
       `[DEBUG] Book ${bookNode.book_name} has book_category: ${bookNode.book_category}`
