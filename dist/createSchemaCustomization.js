@@ -66,7 +66,7 @@ const createSchemaCustomization = ({ actions }) => {
         }
 
         type ${constants_1.NODE_TYPE.RelatedPost} implements Node {
-            posts: [${constants_1.NODE_TYPE.RelatedPost}]
+            posts: [${constants_1.NODE_TYPE.Post}] @link(by: "id")
         }
     `);
 };

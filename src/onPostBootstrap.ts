@@ -1,22 +1,15 @@
 import crypto from "crypto";
 import { GatsbyNode } from "gatsby";
-import { TfIdf, TfIdfTerm } from "natural";
+import { TfIdf, TfIdfTerm, WordTokenizer } from "natural";
 import { NODE_TYPE } from "./constants";
 import { IPost, ISourceNodesOptions } from "./types";
 
 import computeCosineSimilarity from "compute-cosine-similarity";
-import { NlpManager } from "node-nlp";
 
-const manager = new NlpManager({ languages: ["ko"] });
+const tokenizer = new WordTokenizer();
 
-const getTokens = async (doc: string): Promise<string[]> => {
-  const result = await manager.process("ko", doc);
-  if (!result.entities) {
-    return [];
-  }
-  return result.entities
-    .map((entity) => entity.utteranceText)
-    .filter((text) => text.length > 1);
+const getTokens = (doc: string): string[] => {
+  return tokenizer.tokenize(doc);
 };
 
 const vector_similarity_memo = new Map<string, number>();
@@ -85,7 +78,7 @@ const getRelatedPosts = (
       );
     })
     .map((x) => x[0])
-    .slice(0, 5);
+    .slice(0, 6);
 };
 
 const getTextFromRawText = async (doc: string) => {
@@ -94,11 +87,8 @@ const getTextFromRawText = async (doc: string) => {
     .replace(/[\#\!\(\)\*\_\[\]\|\=\>\+\`\:\-]/g, "");
 };
 
-const getSpaceSeparatedDoc = async (doc: string): Promise<string> => {
-  if (!doc.trim()) {
-    return "";
-  }
-  const tokens = await getTokens(doc);
+const getSpaceSeparatedDoc = (doc: string): string => {
+  const tokens = getTokens(doc);
   return tokens.join(" ");
 };
 
@@ -126,19 +116,18 @@ export const onPostBootstrap: GatsbyNode[`onPostBootstrap`] = async (
         const ssd = await getSpaceSeparatedDoc(
           await getTextFromRawText(doc.text)
         );
+
         tfidf.addDocument(ssd);
         await cache.set(key, ssd);
       }
     }
   });
 
-  // generate bow vectors
   type Term = TfIdfTerm & {
     tf: number;
     idf: number;
   };
 
-  //
   const doc_terms = docs.map((_, i) =>
     (tfidf.listTerms(i) as Term[])
       .map((x) => ({ ...x, tfidf: (x as Term).tf * (x as Term).idf }))
@@ -156,6 +145,7 @@ export const onPostBootstrap: GatsbyNode[`onPostBootstrap`] = async (
   });
 
   const bow_vectors = new Map<string, BowVector>();
+
   docs.forEach((x, i) => {
     if (bow_vectors === null) return;
     bow_vectors.set(
@@ -165,24 +155,20 @@ export const onPostBootstrap: GatsbyNode[`onPostBootstrap`] = async (
         .map((x) => (x === undefined ? 0 : x))
     );
   });
-  reporter.info(
-    `[related-posts] bow vectors generated, dimention: ${all_keywords.size}`
-  );
 
   nodes.forEach((node) => {
-    const related_nodes = getRelatedPosts(node.id, bow_vectors)
-      .slice(1)
-      .map((id) => getNode(id));
+    const relatedNodeIds = getRelatedPosts(node.id, bow_vectors);
+
     const digest = `${node.id} - ${NODE_TYPE.RelatedPost}`;
 
     actions.createNode({
       id: createNodeId(digest),
       parent: node.id,
       internal: {
-        type: `related${NODE_TYPE.RelatedPost}s`,
+        type: NODE_TYPE.RelatedPost,
         contentDigest: digest,
       },
-      posts: related_nodes,
+      posts: relatedNodeIds,
     });
   });
 };

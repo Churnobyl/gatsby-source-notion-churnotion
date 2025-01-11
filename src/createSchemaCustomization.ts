@@ -67,7 +67,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
         }
 
         type ${NODE_TYPE.RelatedPost} implements Node {
-            posts: [${NODE_TYPE.RelatedPost}]
+            posts: [${NODE_TYPE.Post}] @link(by: "id")
         }
     `);
   };

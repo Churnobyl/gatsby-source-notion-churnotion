@@ -39,8 +39,6 @@ export const processMetadata = async (
 
         if (href) {
           try {
-            reporter.info(`[INFO] Processing metadata for URL: ${href}`);
-
             const cacheKey = `metadata-${crypto
               .createHash("md5")
               .update(href)
@@ -49,12 +47,10 @@ export const processMetadata = async (
             const cachedMetadata = await cache.get(cacheKey);
 
             if (cachedMetadata) {
-              reporter.info(`[INFO] Using cached metadata for URL: ${href}`);
               text.href = cachedMetadata.nodeId;
               continue;
             }
 
-            reporter.info(`[INFO] Fetching metadata for URL: ${href}`);
             const response = await fetch(href, {
               headers: { "User-Agent": "Mozilla/5.0" },
             });

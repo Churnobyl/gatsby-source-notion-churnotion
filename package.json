@@ -1,7 +1,7 @@
 {
   "name": "gatsby-source-notion-churnotion",
   "description": "Gatsby plugin that can connect with One Notion Database RECURSIVELY using official API",
-  "version": "1.0.95",
+  "version": "1.1.7",
   "skipLibCheck": true,
   "license": "0BSD",
   "main": "./dist/gatsby-node.js",
@@ -48,7 +48,6 @@
     "metascraper-url": "^5.45.25",
     "natural": "^8.0.1",
     "node-fetch": "^3.3.2",
-    "node-nlp": "^5.0.0-alpha.4",
     "notion-to-md": "^3.1.1",
     "notion-types": "^7.1.5",
     "typescript": "^5.7.2"
