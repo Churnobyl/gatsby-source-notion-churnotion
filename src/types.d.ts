@@ -92,6 +92,7 @@ export interface ICategory extends Node {
   children: [];
   url: string;
   books: string[];
+  childrenNBook?: [];
 }
 
 export interface IBook extends Node {

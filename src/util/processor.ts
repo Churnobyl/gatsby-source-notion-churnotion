@@ -171,7 +171,7 @@ const processImageBlock = async (
 
     if (!imageUrl) return null;
 
-    const cacheKey = `${imageUrl}-post-image`;
+    const cacheKey = `${block.id}-post-image`;
     const cachedFileNodeId = await cache.get(cacheKey);
 
     if (cachedFileNodeId) {
