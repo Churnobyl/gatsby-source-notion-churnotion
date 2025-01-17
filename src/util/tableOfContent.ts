@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { BaseContentBlock } from "notion-types";
 
 export const processTableOfContents = async (
@@ -14,7 +15,7 @@ export const processTableOfContents = async (
       .replace(/[^a-zA-Z0-9가-힣\s-_]/g, "")
       .trim()
       .replace(/\s+/g, "-")
-      .toLowerCase()}`;
+      .toLowerCase()}-${randomUUID().substring(0, 4)}`;
     (block as any).hash = hash;
 
     tableOfContents.push({

@@ -46,37 +46,61 @@ const processBlocksForContent = async (
   const tableOfContents: { type: string; hash: string; title: string }[] = [];
   let thumbnail: string | null = null;
   let rawText = "";
+  const updatedBlocks: BaseContentBlock[] = [];
+  let firstImageBlock: BaseContentBlock | null = null;
 
-  const updatedBlocks = (
-    await Promise.all(
-      blocks.map(async (block) => {
-        await processTableOfContents(block, tableOfContents);
+  for (const block of blocks) {
+    if (isImageBlock(block)) {
+      firstImageBlock = block;
+      break;
+    }
+  }
 
-        const plainText = extractPlainText(block);
-        if (plainText) {
-          rawText += plainText + " ";
-        }
+  if (firstImageBlock) {
+    const updatedBlock = await processImageBlock(
+      firstImageBlock as CustomImageBlock,
+      actions,
+      getCache,
+      createNodeId,
+      reporter,
+      cache
+    );
 
-        if (isImageBlock(block)) {
-          const updatedBlock = await processImageBlock(
-            block,
-            actions,
-            getCache,
-            createNodeId,
-            reporter,
-            cache
-          );
+    if (updatedBlock?.image?.fileId) {
+      thumbnail = updatedBlock.image.fileId;
+    }
 
-          if (!thumbnail && updatedBlock?.image?.fileId) {
-            thumbnail = updatedBlock.image.fileId;
-          }
+    updatedBlocks[blocks.indexOf(firstImageBlock)] =
+      updatedBlock || firstImageBlock;
+  }
 
-          return updatedBlock;
-        }
-        return block;
-      })
-    )
-  ).filter((block): block is BaseContentBlock => block !== null);
+  await Promise.all(
+    blocks.map(async (block, index) => {
+      if (block === firstImageBlock) return;
+
+      await processTableOfContents(block, tableOfContents);
+
+      const plainText = extractPlainText(block);
+      if (plainText) {
+        rawText += plainText + " ";
+      }
+
+      if (isImageBlock(block)) {
+        const updatedBlock = await processImageBlock(
+          block as CustomImageBlock,
+          actions,
+          getCache,
+          createNodeId,
+          reporter,
+          cache
+        );
+
+        updatedBlocks[index] = updatedBlock || block;
+      } else {
+        updatedBlocks[index] = block;
+      }
+    })
+  );
 
   return { thumbnail, tableOfContents, updatedBlocks, rawText };
 };
