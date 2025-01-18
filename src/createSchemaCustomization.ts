@@ -52,6 +52,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             create_date: Date! @dateformat
             update_date: Date! @dateformat
             children: [${NODE_TYPE.Post}] @link(by: "book", from: "id")
+            childrenChurnotion: [${NODE_TYPE.Post}]
             url: String!
             book_category: ${NODE_TYPE.Category} @link(by: "id", from: "book_category")
             book_image: File @link(by: "id", from: "book_image")

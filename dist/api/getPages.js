@@ -54,7 +54,6 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             },
                             url: `${constants_1.COMMON_URI}/${constants_1.CATEGORY_URI}${categoryUrl}`,
                             books: [],
-                            childrenNBook: [],
                         };
                         await createNode(categoryNode);
                         const bookRelations = page.properties?.books?.relation || null;

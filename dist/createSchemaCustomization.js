@@ -43,7 +43,6 @@ const createSchemaCustomization = ({ actions }) => {
             churnotions: [${constants_1.NODE_TYPE.Post}] @link(by: "category", from: "id")
             url: String!
             books: [${constants_1.NODE_TYPE.Book}] @link(by: "id")
-            childrenNBook: [ID!]! @default(value: [])
         }
 
         type ${constants_1.NODE_TYPE.Book} implements Node {
@@ -52,6 +51,7 @@ const createSchemaCustomization = ({ actions }) => {
             create_date: Date! @dateformat
             update_date: Date! @dateformat
             children: [${constants_1.NODE_TYPE.Post}] @link(by: "book", from: "id")
+            childrenChurnotion: [${constants_1.NODE_TYPE.Post}]
             url: String!
             book_category: ${constants_1.NODE_TYPE.Category} @link(by: "id", from: "book_category")
             book_image: File @link(by: "id", from: "book_image")
