@@ -60,8 +60,8 @@ export interface IPost extends Node {
   title: string;
   // content: MdBlock[];
   content: BaseContentBlock[];
-  create_date: Date;
-  update_date: Date;
+  create_date: string;
+  update_date: string;
   version: number;
   description: string | null;
   slug: string;
@@ -98,8 +98,8 @@ export interface ICategory extends Node {
 export interface IBook extends Node {
   id: string;
   book_name: string;
-  create_date: Date;
-  update_date: Date;
+  create_date: string;
+  update_date: string;
   internal: Node.Internal;
   url: string;
   book_category: string | null;

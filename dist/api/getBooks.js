@@ -9,6 +9,7 @@ const constants_1 = require("../constants");
 const fetchData_1 = require("../util/fetchData");
 const gatsby_source_filesystem_1 = require("gatsby-source-filesystem");
 const bookCategoryMap_1 = __importDefault(require("../util/bookCategoryMap"));
+const formatDate_1 = require("../util/formatDate");
 const getBooks = async ({ bookDatabaseId, reporter, getCache, createNode, createNodeId, getNode, cache, }) => {
     const databaseUrl = `databases/${bookDatabaseId}/query`;
     const cacheKey = `booksDatabase-${bookDatabaseId}`;
@@ -62,8 +63,8 @@ const getBooks = async ({ bookDatabaseId, reporter, getCache, createNode, create
                     .update(JSON.stringify(page))
                     .digest(`hex`),
             },
-            create_date: page.created_time,
-            update_date: page.last_edited_time,
+            create_date: (0, formatDate_1.useFormatDate)(page.created_time),
+            update_date: (0, formatDate_1.useFormatDate)(page.last_edited_time),
             url: `${constants_1.COMMON_URI}/${constants_1.BOOK_URI}/${slug}`,
             book_category: book_category,
             book_image: bookImageNode.id,

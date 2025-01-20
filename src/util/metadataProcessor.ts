@@ -75,7 +75,7 @@ export const processMetadata = async (
               title: metadata.title || "",
               description: metadata.description || "",
               image: metadata.image || "",
-              url: metadata.url || href,
+              url: href,
             };
 
             createNode(metadataNode);

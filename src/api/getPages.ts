@@ -11,6 +11,7 @@ import { fetchGetWithRetry, fetchPostWithRetry } from "../util/fetchData";
 import { processor } from "../util/processor";
 import { slugify } from "../util/slugify";
 import bookCategoryMap from "../util/bookCategoryMap";
+import { useFormatDate } from "../util/formatDate";
 
 export const getPages = async ({
   databaseId,
@@ -87,7 +88,7 @@ export const getPages = async ({
             };
             await createNode(categoryNode);
 
-            const bookRelations = page.properties?.books?.relation || null;
+            const bookRelations = page.properties?.book?.relation || null;
             if (bookRelations) {
               bookRelations.forEach((relation: { id: string }) => {
                 const bookId = relation.id;
@@ -232,8 +233,8 @@ export const getPages = async ({
               book_index: page.properties?.bookIndex?.number || 0,
               title: title,
               content: updatedBlocks,
-              create_date: page.created_time,
-              update_date: page.last_edited_time,
+              create_date: useFormatDate(page.created_time),
+              update_date: useFormatDate(page.last_edited_time),
               version: page.properties?.version?.number || null,
               description:
                 page.properties?.description?.rich_text?.[0]?.plain_text ||

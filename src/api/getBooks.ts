@@ -4,6 +4,7 @@ import { IBook, IGetBooksParams } from "../types";
 import { fetchPostWithRetry } from "../util/fetchData";
 import { createRemoteFileNode } from "gatsby-source-filesystem";
 import bookCategoryMap from "../util/bookCategoryMap";
+import { useFormatDate } from "../util/formatDate";
 
 export const getBooks = async ({
   bookDatabaseId,
@@ -80,8 +81,8 @@ export const getBooks = async ({
           .update(JSON.stringify(page))
           .digest(`hex`),
       },
-      create_date: page.created_time,
-      update_date: page.last_edited_time,
+      create_date: useFormatDate(page.created_time),
+      update_date: useFormatDate(page.last_edited_time),
       url: `${COMMON_URI}/${BOOK_URI}/${slug}`,
       book_category: book_category,
       book_image: bookImageNode.id,

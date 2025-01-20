@@ -44,6 +44,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             churnotions: [${NODE_TYPE.Post}] @link(by: "category", from: "id")
             url: String!
             books: [${NODE_TYPE.Book}] @link(by: "id")
+            childrenNBook: [${NODE_TYPE.Book}] @link(by: "book_category", from: "id")
         }
 
         type ${NODE_TYPE.Book} implements Node {

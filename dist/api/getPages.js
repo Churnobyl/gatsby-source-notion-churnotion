@@ -10,6 +10,7 @@ const fetchData_1 = require("../util/fetchData");
 const processor_1 = require("../util/processor");
 const slugify_1 = require("../util/slugify");
 const bookCategoryMap_1 = __importDefault(require("../util/bookCategoryMap"));
+const formatDate_1 = require("../util/formatDate");
 const getPages = async ({ databaseId, reporter, getCache, actions, createNode, createNodeId, createParentChildLink, getNode, cache, }) => {
     /**
      * 데이터베이스 내에 페이지들을 읽어서 재귀적으로 추가하는 서브 메서드드
@@ -56,7 +57,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             books: [],
                         };
                         await createNode(categoryNode);
-                        const bookRelations = page.properties?.books?.relation || null;
+                        const bookRelations = page.properties?.book?.relation || null;
                         if (bookRelations) {
                             bookRelations.forEach((relation) => {
                                 const bookId = relation.id;
@@ -161,8 +162,8 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             book_index: page.properties?.bookIndex?.number || 0,
                             title: title,
                             content: updatedBlocks,
-                            create_date: page.created_time,
-                            update_date: page.last_edited_time,
+                            create_date: (0, formatDate_1.useFormatDate)(page.created_time),
+                            update_date: (0, formatDate_1.useFormatDate)(page.last_edited_time),
                             version: page.properties?.version?.number || null,
                             description: page.properties?.description?.rich_text?.[0]?.plain_text ||
                                 rawText,

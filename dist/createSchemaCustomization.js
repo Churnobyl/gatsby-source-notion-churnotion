@@ -43,6 +43,7 @@ const createSchemaCustomization = ({ actions }) => {
             churnotions: [${constants_1.NODE_TYPE.Post}] @link(by: "category", from: "id")
             url: String!
             books: [${constants_1.NODE_TYPE.Book}] @link(by: "id")
+            childrenNBook: [${constants_1.NODE_TYPE.Book}] @link(by: "book_category", from: "id")
         }
 
         type ${constants_1.NODE_TYPE.Book} implements Node {
