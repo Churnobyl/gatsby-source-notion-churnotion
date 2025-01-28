@@ -166,7 +166,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                             update_date: (0, formatDate_1.useFormatDate)(page.last_edited_time),
                             version: page.properties?.version?.number || null,
                             description: page.properties?.description?.rich_text?.[0]?.plain_text ||
-                                rawText,
+                                rawText.substring(0, 400),
                             slug: slug,
                             category_list: categoryPath,
                             children: [],

@@ -238,7 +238,7 @@ export const getPages = async ({
               version: page.properties?.version?.number || null,
               description:
                 page.properties?.description?.rich_text?.[0]?.plain_text ||
-                rawText,
+                rawText.substring(0, 400),
               slug: slug,
               category_list: categoryPath,
               children: [],
