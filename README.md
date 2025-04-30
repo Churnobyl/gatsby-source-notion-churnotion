@@ -6,7 +6,49 @@ This plugin recursively collects categories from a single Notion database, which
 
 If you're considering Notion as your CMS for Gatsby, this plugin could be a great choice as it supports recursive category collection.
 
-## What's New in v1.1.29
+## What's New in v1.1.35
+
+- **Major Overhaul of Node Relationship Handling**:
+  - Completely rewrote the Book-Post relationship mechanism
+  - Added custom GraphQL resolver for childrenChurnotion field
+  - Improved recursive database traversal logic
+  - Optimized batch processing with smaller batches (20 pages at a time)
+  - Added detailed logging for better debuggability
+  - Simplified code structure with direct database page processing
+
+## What's New in v1.1.34
+
+- **Fixed GraphQL Query Error**:
+  - Fixed "Cannot return null for non-nullable field Churnotion.rawText" error
+  - Changed rawText field to be nullable in schema definition
+  - Added fallback empty string for rawText in Post node creation
+  - Improved error handling for description field
+
+## What's New in v1.1.33
+
+- **Fixed childrenChurnotion Field Issues**:
+  - Completely redesigned how Book-Post relationships are handled
+  - Added explicit node fields for childrenChurnotion
+  - Implemented robust node relationship creation in onPostBootstrap
+  - Fixed schema definition by using Fields type
+  - Resolved persistent "Field childrenChurnotion is not defined" error
+
+## What's New in v1.1.32
+
+- **Fixed Gatsby Schema Relationship Bug**:
+  - Fixed `childrenChurnotion` field relationship in NBook nodes
+  - Properly defined relationship between Book and Post nodes
+  - Fixed "Field 'childrenChurnotion' is not defined" error during Gatsby build
+
+## What's New in v1.1.31
+
+- **Fixed ES Module compatibility issues**:
+  - Removed dependency on external p-limit library
+  - Implemented custom parallel processing queue
+  - Fixed Gatsby build errors related to ESM imports
+  - Improved CommonJS compatibility
+
+## What's New in v1.1.30
 
 - **Added support for more Notion block types**: 
   - bookmark, breadcrumb, callout, code, column, column_list, divider, embed, equation, file, link_preview, pdf, table, table_of_contents, toggle, to_do, video, audio
@@ -19,7 +61,6 @@ If you're considering Notion as your CMS for Gatsby, this plugin could be a grea
   - Modular block processor architecture
   - Better error handling
   - Improved type safety
-  - Fixed ES Module import issue with p-limit
 
 ## Install
 
@@ -97,8 +138,3 @@ query MyQuery {
   }
 }
 ```
-
-This will return results in MDX format, as shown below:
-
-
-![alt text](readme3.png)

@@ -2,10 +2,127 @@ import { GatsbyNode } from "gatsby";
 import { NODE_TYPE } from "./constants";
 
 export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] =
-  ({ actions }) => {
+  ({ actions, schema }) => {
     const { createTypes } = actions;
 
-    createTypes(`
+    createTypes([
+      schema.buildObjectType({
+        name: NODE_TYPE.Book,
+        interfaces: ["Node"],
+        fields: {
+          id: "ID!",
+          book_name: "String!",
+          create_date: {
+            type: "Date!",
+            extensions: {
+              dateformat: {},
+            },
+          },
+          update_date: {
+            type: "Date!",
+            extensions: {
+              dateformat: {},
+            },
+          },
+          children: {
+            type: `[${NODE_TYPE.Post}]`,
+            extensions: {
+              link: { by: "book", from: "id" },
+            },
+          },
+          childrenChurnotion: {
+            type: `[${NODE_TYPE.Post}]`,
+            resolve: (source, args, context) => {
+              return context.nodeModel.runQuery({
+                query: {
+                  filter: {
+                    book: { eq: source.id },
+                  },
+                },
+                type: NODE_TYPE.Post,
+                firstOnly: false,
+              });
+            },
+          },
+          url: "String!",
+          book_category: {
+            type: NODE_TYPE.Category,
+            extensions: {
+              link: { by: "id", from: "book_category" },
+            },
+          },
+          book_image: {
+            type: "File",
+            extensions: {
+              link: { by: "id", from: "book_image" },
+            },
+          },
+          description: "String!",
+        },
+      }),
+
+      schema.buildObjectType({
+        name: NODE_TYPE.Category,
+        interfaces: ["Node"],
+        fields: {
+          id: "ID!",
+          parent: {
+            type: NODE_TYPE.Category,
+            extensions: {
+              link: { by: "id", from: "parent" },
+            },
+          },
+          category_name: "String!",
+          slug: "String!",
+          children: {
+            type: `[${NODE_TYPE.Category}!]!`,
+            extensions: {
+              link: { by: "parent", from: "id" },
+            },
+          },
+          churnotions: {
+            type: `[${NODE_TYPE.Post}]`,
+            extensions: {
+              link: { by: "category", from: "id" },
+            },
+          },
+          childrenChurnotion: {
+            type: `[${NODE_TYPE.Post}]`,
+            resolve: (source, args, context) => {
+              return context.nodeModel.runQuery({
+                query: {
+                  filter: {
+                    category: { eq: source.id },
+                  },
+                },
+                type: NODE_TYPE.Post,
+                firstOnly: false,
+              });
+            },
+          },
+          url: "String!",
+          books: {
+            type: `[${NODE_TYPE.Book}]`,
+            extensions: {
+              link: { by: "id" },
+            },
+          },
+          childrenNBook: {
+            type: `[${NODE_TYPE.Book}]`,
+            extensions: {
+              link: { by: "book_category", from: "id" },
+            },
+          },
+          childrenNCategory: {
+            type: `[${NODE_TYPE.Category}]`,
+            extensions: {
+              link: { by: "parent", from: "id" },
+            },
+          },
+        },
+      }),
+
+      `
         type ${NODE_TYPE.Post} implements Node {
             id: ID!
             category: ${NODE_TYPE.Category}! @link(by: "id", from: "category")
@@ -23,7 +140,7 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             category_list: [${NODE_TYPE.Category}]
             url: String!
             thumbnail: File @link(by: "id", from: "thumbnail")
-            rawText: String!
+            rawText: String
         }
         
         type ${NODE_TYPE.Tag} implements Node {
@@ -35,29 +152,8 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             url: String!
         }
 
-        type ${NODE_TYPE.Category} implements Node {
-            id: ID!
-            parent: ${NODE_TYPE.Category} @link(by: "id", from: "parent")
-            category_name: String!
-            slug: String!
-            children: [${NODE_TYPE.Category}!]! @link(by: "parent")
-            churnotions: [${NODE_TYPE.Post}] @link(by: "category", from: "id")
-            url: String!
-            books: [${NODE_TYPE.Book}] @link(by: "id")
-            childrenNBook: [${NODE_TYPE.Book}] @link(by: "book_category", from: "id")
-        }
-
-        type ${NODE_TYPE.Book} implements Node {
-            id: ID!
-            book_name: String!
-            create_date: Date! @dateformat
-            update_date: Date! @dateformat
-            children: [${NODE_TYPE.Post}] @link(by: "book", from: "id")
-            childrenChurnotion: [${NODE_TYPE.Post}]
-            url: String!
-            book_category: ${NODE_TYPE.Category} @link(by: "id", from: "book_category")
-            book_image: File @link(by: "id", from: "book_image")
-            description: String!
+        type Fields {
+            childrenChurnotion: [${NODE_TYPE.Post}] @link(by: "id")
         }
 
         type ${NODE_TYPE.Metadata} implements Node {
@@ -71,5 +167,6 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
         type ${NODE_TYPE.RelatedPost} implements Node {
             posts: [${NODE_TYPE.Post}] @link(by: "id")
         }
-    `);
+    `,
+    ]);
   };

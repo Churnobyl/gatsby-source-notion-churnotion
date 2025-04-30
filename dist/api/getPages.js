@@ -37,12 +37,12 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                 const result = await notionService.queryDatabase(databaseId);
                 hasMore = false; // Notion API가 페이지네이션을 완전히 지원하지 않으므로 일단 한 번만 처리
                 if (result?.results?.length) {
-                    reporter.info(`[SUCCESS] total pages > ${result.results.length}`);
+                    reporter.info(`[SUCCESS] Database ${databaseId} has ${result.results.length} pages`);
                     // 페이지 ID 목록 수집
                     const pageIds = result.results.map((page) => page.id);
-                    // 페이지 블록들을 병렬로 가져오기 - 최대 50개씩 배치 처리
-                    for (let i = 0; i < pageIds.length; i += 50) {
-                        const batch = pageIds.slice(i, i + 50);
+                    // 페이지 블록들을 병렬로 가져오기 - 최대 20개씩 배치 처리
+                    for (let i = 0; i < pageIds.length; i += 20) {
+                        const batch = pageIds.slice(i, i + 20);
                         reporter.info(`[BATCH] Processing pages ${i + 1} to ${i + batch.length} of ${pageIds.length}`);
                         const batchBlocks = await notionService.getMultiplePagesBlocks(batch);
                         // 페이지 데이터와 블록 결합
@@ -59,105 +59,99 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                     }
                 }
             }
-            // 모든 페이지 병렬 처리
-            await Promise.all(pagesToProcess.map(async ({ page, blocks }) => {
+            reporter.info(`[PROCESS] Processing ${pagesToProcess.length} pages from database ${databaseId}`);
+            // 모든 페이지 처리
+            for (const { page, blocks } of pagesToProcess) {
                 try {
-                    // Timeout 설정으로 너무 오래 걸리는 페이지는 건너뛰기
-                    await (0, timeLimit_1.timeLimit)(processPageData(page, blocks, parentCategoryId, categoryPath, tagMap, parentCategoryUrl), 30000, // 30초 제한
-                    `Processing page ${page.id} timed out after 30 seconds`);
+                    // 첫 번째 블록이 child_database인지 확인
+                    if (blocks?.[0]?.type === `child_database`) {
+                        // 카테고리 처리
+                        const categoryJsonData = blocks[0];
+                        const title = categoryJsonData.child_database?.title || `Unnamed Category`;
+                        const slug = (0, slugify_1.slugify)(title) || `no-title-${categoryJsonData.id}`;
+                        if (!title) {
+                            reporter.warn(`[WARNING] Category without a title detected: ${categoryJsonData.id}`);
+                        }
+                        const nodeId = createNodeId(`${categoryJsonData.id}-category`);
+                        const categoryUrl = `${parentCategoryUrl}/${slug}`;
+                        const categoryNode = {
+                            id: nodeId,
+                            category_name: title,
+                            parent: parentCategoryId,
+                            slug: slug,
+                            children: [],
+                            internal: {
+                                type: constants_1.NODE_TYPE.Category,
+                                contentDigest: crypto_1.default
+                                    .createHash(`md5`)
+                                    .update(JSON.stringify(categoryJsonData))
+                                    .digest(`hex`),
+                            },
+                            url: `${constants_1.COMMON_URI}/${constants_1.CATEGORY_URI}${categoryUrl}`,
+                            books: [],
+                        };
+                        await createNode(categoryNode);
+                        // Book 관계 처리
+                        const bookRelations = page.properties?.book?.relation || null;
+                        if (bookRelations) {
+                            bookRelations.forEach((relation) => {
+                                const bookId = relation.id;
+                                const bookNodeId = createNodeId(`${bookId}-book`);
+                                const bookNode = getNode(bookNodeId);
+                                if (bookNode) {
+                                    createParentChildLink({
+                                        parent: categoryNode,
+                                        child: bookNode,
+                                    });
+                                    const updatedBookNode = {
+                                        ...bookNode,
+                                        book_category: categoryNode.id,
+                                        internal: {
+                                            type: bookNode.internal.type,
+                                            contentDigest: crypto_1.default
+                                                .createHash(`md5`)
+                                                .update(JSON.stringify(bookNode))
+                                                .digest(`hex`),
+                                        },
+                                    };
+                                    createNode(updatedBookNode);
+                                    reporter.info(`[SUCCESS] Linked Category-Book: ${categoryNode.category_name} -> child: ${bookNode.book_name}`);
+                                }
+                            });
+                        }
+                        // 부모-자식 카테고리 관계 설정
+                        if (parentCategoryId && categoryNode) {
+                            const parentNode = getNode(parentCategoryId);
+                            if (parentNode) {
+                                createParentChildLink({
+                                    parent: parentNode,
+                                    child: categoryNode,
+                                });
+                                reporter.info(`[SUCCESS] Linked parent: ${parentNode.category_name} -> child: ${categoryNode.category_name}`);
+                            }
+                            else {
+                                reporter.warn(`[WARNING] Parent node not found for ID: ${parentCategoryId}`);
+                            }
+                        }
+                        const newCategoryPath = [...categoryPath, categoryNode];
+                        // 해당 데이터베이스의 하위 페이지들을 처리
+                        // 여기서 재귀적으로 자식 데이터베이스 처리
+                        await processDatabase(categoryJsonData.id, nodeId, newCategoryPath, categoryUrl);
+                    }
+                    else {
+                        // 일반 포스트 처리
+                        await (0, timeLimit_1.timeLimit)(processPost(page, blocks, parentCategoryId, categoryPath, tagMap, parentCategoryUrl), 30000, // 30초 제한
+                        `Processing post ${page.id} timed out after 30 seconds`);
+                    }
                 }
                 catch (error) {
                     reporter.warn(`[WARNING] Error processing page ${page.id}: ${error}`);
                 }
-            }));
+            }
         }
         catch (error) {
             reporter.error(`[ERROR] Processing database ${databaseId} failed: ${error}`);
         }
-    };
-    /**
-     * 페이지 데이터 처리 메서드
-     */
-    const processPageData = async (page, pageBlocks, parentCategoryId, categoryPath, tagMap, parentCategoryUrl) => {
-        // 첫 번째 블록이 child_database인지 확인
-        if (pageBlocks?.[0]?.type === `child_database`) {
-            await processCategory(page, pageBlocks, parentCategoryId, categoryPath, tagMap, parentCategoryUrl);
-        }
-        else {
-            await processPost(page, pageBlocks, parentCategoryId, categoryPath, tagMap, parentCategoryUrl);
-        }
-    };
-    /**
-     * 카테고리 처리 메서드
-     */
-    const processCategory = async (page, pageBlocks, parentCategoryId, categoryPath, tagMap, parentCategoryUrl) => {
-        const categoryJsonData = pageBlocks[0];
-        const title = categoryJsonData.child_database?.title || `Unnamed Category`;
-        const slug = (0, slugify_1.slugify)(title) || `no-title-${categoryJsonData.id}`;
-        if (!title) {
-            reporter.warn(`[WARNING] Category without a title detected: ${categoryJsonData.id}`);
-        }
-        const nodeId = createNodeId(`${categoryJsonData.id}-category`);
-        const categoryUrl = `${parentCategoryUrl}/${slug}`;
-        const categoryNode = {
-            id: nodeId,
-            category_name: title,
-            parent: parentCategoryId,
-            slug: slug,
-            children: [],
-            internal: {
-                type: constants_1.NODE_TYPE.Category,
-                contentDigest: crypto_1.default
-                    .createHash(`md5`)
-                    .update(JSON.stringify(categoryJsonData))
-                    .digest(`hex`),
-            },
-            url: `${constants_1.COMMON_URI}/${constants_1.CATEGORY_URI}${categoryUrl}`,
-            books: [],
-        };
-        await createNode(categoryNode);
-        const bookRelations = page.properties?.book?.relation || null;
-        if (bookRelations) {
-            bookRelations.forEach((relation) => {
-                const bookId = relation.id;
-                const bookNodeId = createNodeId(`${bookId}-book`);
-                const bookNode = getNode(bookNodeId);
-                if (bookNode) {
-                    createParentChildLink({
-                        parent: categoryNode,
-                        child: bookNode,
-                    });
-                    const updatedBookNode = {
-                        ...bookNode,
-                        book_category: categoryNode.id,
-                        internal: {
-                            type: bookNode.internal.type,
-                            contentDigest: crypto_1.default
-                                .createHash(`md5`)
-                                .update(JSON.stringify(bookNode))
-                                .digest(`hex`),
-                        },
-                    };
-                    createNode(updatedBookNode);
-                    reporter.info(`[SUCCESS] Linked Category-Book: ${categoryNode.category_name} -> child: ${bookNode.book_name}`);
-                }
-            });
-        }
-        if (parentCategoryId && categoryNode) {
-            const parentNode = getNode(parentCategoryId);
-            if (parentNode) {
-                createParentChildLink({
-                    parent: parentNode,
-                    child: categoryNode,
-                });
-                reporter.info(`[SUCCESS] Linked parent: ${parentNode.category_name} -> child: ${categoryNode.category_name}`);
-            }
-            else {
-                reporter.warn(`[WARNING] Parent node not found for ID: ${parentCategoryId}`);
-            }
-        }
-        const newCategoryPath = [...categoryPath, categoryNode];
-        await processDatabase(categoryJsonData.id, nodeId, newCategoryPath, categoryUrl);
     };
     /**
      * 포스트 처리 메서드
@@ -224,7 +218,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
             update_date: (0, formatDate_1.useFormatDate)(page.last_edited_time),
             version: page.properties?.version?.number || null,
             description: page.properties?.description?.rich_text?.[0]?.plain_text ||
-                rawText.substring(0, 400),
+                (rawText ? rawText.substring(0, 400) : ""),
             slug: slug,
             category_list: categoryPath,
             children: [],
@@ -240,8 +234,10 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
             url: `${constants_1.COMMON_URI}/${constants_1.POST_URI}/${slug}`,
             thumbnail: imageNode,
             parent: parentCategoryId,
+            rawText: rawText || "",
         };
         await createNode(postNode);
+        reporter.info(`[SUCCESS] Created post node: ${title} (${nodeId})`);
         if (parentCategoryId) {
             const parentNode = getNode(parentCategoryId);
             if (parentNode) {

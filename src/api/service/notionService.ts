@@ -8,58 +8,69 @@ export interface NotionServiceOptions {
   enableCaching?: boolean;
 }
 
+/**
+ * 간단한 병렬 제한 큐
+ */
+class ParallelLimiter {
+  private running: number = 0;
+  private queue: Array<() => void> = [];
+  private limit: number;
+
+  constructor(limit: number) {
+    this.limit = limit;
+  }
+
+  async add<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const run = () => {
+        this.running++;
+        fn()
+          .then(resolve)
+          .catch(reject)
+          .finally(() => {
+            this.running--;
+            this.next();
+          });
+      };
+
+      if (this.running < this.limit) {
+        run();
+      } else {
+        this.queue.push(run);
+      }
+    });
+  }
+
+  private next() {
+    if (this.queue.length > 0 && this.running < this.limit) {
+      const run = this.queue.shift();
+      if (run) run();
+    }
+  }
+
+  setLimit(limit: number) {
+    this.limit = limit;
+
+    // 새 제한 설정 후 큐에서 가능한 작업 실행
+    while (this.running < this.limit && this.queue.length > 0) {
+      this.next();
+    }
+  }
+}
+
 export class NotionService {
   private reporter: Reporter;
   private parallelLimit: number;
   private enableCaching: boolean;
   private cache: Map<string, any>;
-  private limiter: any;
+  private limiter: ParallelLimiter;
 
   constructor(options: NotionServiceOptions) {
     this.reporter = options.reporter;
     this.parallelLimit = options.parallelLimit || 5; // 기본 동시 요청 수
     this.enableCaching = options.enableCaching !== false; // 기본값은 캐싱 활성화
     this.cache = new Map();
-    this.initLimiter();
-  }
-
-  private async initLimiter() {
-    try {
-      const pLimitModule = await import("p-limit");
-      const pLimit = pLimitModule.default;
-      this.limiter = pLimit(this.parallelLimit);
-    } catch (error) {
-      this.reporter.error(`Failed to initialize p-limit: ${error}`);
-      this.limiter = this.createSimpleLimiter(this.parallelLimit);
-    }
-  }
-
-  private createSimpleLimiter(limit: number) {
-    let running = 0;
-    const queue: Array<() => void> = [];
-
-    const next = () => {
-      running--;
-      if (queue.length > 0) {
-        const run = queue.shift();
-        if (run) run();
-      }
-    };
-
-    return (fn: () => Promise<any>) => {
-      return new Promise((resolve, reject) => {
-        const run = () => {
-          running++;
-          fn().then(resolve).catch(reject).finally(next);
-        };
-
-        if (running < limit) {
-          run();
-        } else {
-          queue.push(run);
-        }
-      });
-    };
+    this.limiter = new ParallelLimiter(this.parallelLimit);
   }
 
   /**
@@ -134,16 +145,12 @@ export class NotionService {
   async getMultiplePagesBlocks(
     pageIds: string[]
   ): Promise<{ [id: string]: BaseContentBlock[] }> {
-    if (!this.limiter) {
-      await this.initLimiter();
-    }
-
     this.reporter.info(
       `[NOTION] Fetching blocks for ${pageIds.length} pages in parallel (limit: ${this.parallelLimit})`
     );
 
     const tasks = pageIds.map((pageId) =>
-      this.limiter(async () => {
+      this.limiter.add(async () => {
         try {
           const blocks = await this.getPageBlocks(pageId);
           return { pageId, blocks };
@@ -158,10 +165,13 @@ export class NotionService {
 
     const results = await Promise.all(tasks);
 
-    return results.reduce((acc, { pageId, blocks }) => {
-      acc[pageId] = blocks;
-      return acc;
-    }, {} as { [id: string]: BaseContentBlock[] });
+    return results.reduce(
+      (acc: { [id: string]: BaseContentBlock[] }, { pageId, blocks }) => {
+        acc[pageId] = blocks;
+        return acc;
+      },
+      {}
+    );
   }
 
   /**
@@ -177,9 +187,9 @@ export class NotionService {
   /**
    * 병렬 처리 제한 설정
    */
-  async setParallelLimit(limit: number): Promise<void> {
-    this.parallelLimit = limit;
-    await this.initLimiter();
+  setParallelLimit(limit: number): void {
     this.reporter.info(`[NOTION] Updated parallel request limit to ${limit}`);
+    this.parallelLimit = limit;
+    this.limiter.setLimit(limit);
   }
 }
