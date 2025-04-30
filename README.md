@@ -6,6 +6,21 @@ This plugin recursively collects categories from a single Notion database, which
 
 If you're considering Notion as your CMS for Gatsby, this plugin could be a great choice as it supports recursive category collection.
 
+## What's New in v1.1.29
+
+- **Added support for more Notion block types**: 
+  - bookmark, breadcrumb, callout, code, column, column_list, divider, embed, equation, file, link_preview, pdf, table, table_of_contents, toggle, to_do, video, audio
+- **Improved performance**:
+  - Added parallel processing for Notion API requests with concurrency limits
+  - Implemented caching to reduce duplicate API calls
+  - Added batch processing for large datasets
+  - Added timeout handling for long-running operations
+- **Code refactoring**:
+  - Modular block processor architecture
+  - Better error handling
+  - Improved type safety
+  - Fixed ES Module import issue with p-limit
+
 ## Install
 
 ```shell
@@ -64,7 +79,7 @@ When the development server is running, `gatsby-source-notion-churnotion` will f
 
 ### Explore in GraphQL
 
-Once the data is fetched, go to http://localhost:8000/__graphql, where you’ll find new nodes such as `Churnotion`, `NBook`, `NCategory`, and `NTag` as shown below:
+Once the data is fetched, go to http://localhost:8000/__graphql, where you'll find new nodes such as `Churnotion`, `NBook`, `NCategory`, and `NTag` as shown below:
 
 ![alt text](readme2.png)
 

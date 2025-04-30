@@ -1,7 +1,6 @@
 import { fetchGetWithRetry, fetchPostWithRetry } from "../../util/fetchData";
 import { Reporter } from "gatsby";
 import { BaseContentBlock } from "notion-types";
-import pLimit from "p-limit";
 
 export interface NotionServiceOptions {
   reporter: Reporter;
@@ -14,14 +13,53 @@ export class NotionService {
   private parallelLimit: number;
   private enableCaching: boolean;
   private cache: Map<string, any>;
-  private limiter: ReturnType<typeof pLimit>;
+  private limiter: any;
 
   constructor(options: NotionServiceOptions) {
     this.reporter = options.reporter;
     this.parallelLimit = options.parallelLimit || 5; // 기본 동시 요청 수
     this.enableCaching = options.enableCaching !== false; // 기본값은 캐싱 활성화
     this.cache = new Map();
-    this.limiter = pLimit(this.parallelLimit);
+    this.initLimiter();
+  }
+
+  private async initLimiter() {
+    try {
+      const pLimitModule = await import("p-limit");
+      const pLimit = pLimitModule.default;
+      this.limiter = pLimit(this.parallelLimit);
+    } catch (error) {
+      this.reporter.error(`Failed to initialize p-limit: ${error}`);
+      this.limiter = this.createSimpleLimiter(this.parallelLimit);
+    }
+  }
+
+  private createSimpleLimiter(limit: number) {
+    let running = 0;
+    const queue: Array<() => void> = [];
+
+    const next = () => {
+      running--;
+      if (queue.length > 0) {
+        const run = queue.shift();
+        if (run) run();
+      }
+    };
+
+    return (fn: () => Promise<any>) => {
+      return new Promise((resolve, reject) => {
+        const run = () => {
+          running++;
+          fn().then(resolve).catch(reject).finally(next);
+        };
+
+        if (running < limit) {
+          run();
+        } else {
+          queue.push(run);
+        }
+      });
+    };
   }
 
   /**
@@ -96,6 +134,10 @@ export class NotionService {
   async getMultiplePagesBlocks(
     pageIds: string[]
   ): Promise<{ [id: string]: BaseContentBlock[] }> {
+    if (!this.limiter) {
+      await this.initLimiter();
+    }
+
     this.reporter.info(
       `[NOTION] Fetching blocks for ${pageIds.length} pages in parallel (limit: ${this.parallelLimit})`
     );
@@ -135,9 +177,9 @@ export class NotionService {
   /**
    * 병렬 처리 제한 설정
    */
-  setParallelLimit(limit: number): void {
+  async setParallelLimit(limit: number): Promise<void> {
     this.parallelLimit = limit;
-    this.limiter = pLimit(limit);
+    await this.initLimiter();
     this.reporter.info(`[NOTION] Updated parallel request limit to ${limit}`);
   }
 }

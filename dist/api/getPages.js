@@ -40,15 +40,22 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                     reporter.info(`[SUCCESS] total pages > ${result.results.length}`);
                     // 페이지 ID 목록 수집
                     const pageIds = result.results.map((page) => page.id);
-                    // 페이지 블록들을 병렬로 가져오기
-                    const pagesBlocks = await notionService.getMultiplePagesBlocks(pageIds);
-                    // 페이지 데이터와 블록 결합
-                    for (const page of result.results) {
-                        const pageData = {
-                            page,
-                            blocks: pagesBlocks[page.id] || [],
-                        };
-                        pagesToProcess.push(pageData);
+                    // 페이지 블록들을 병렬로 가져오기 - 최대 50개씩 배치 처리
+                    for (let i = 0; i < pageIds.length; i += 50) {
+                        const batch = pageIds.slice(i, i + 50);
+                        reporter.info(`[BATCH] Processing pages ${i + 1} to ${i + batch.length} of ${pageIds.length}`);
+                        const batchBlocks = await notionService.getMultiplePagesBlocks(batch);
+                        // 페이지 데이터와 블록 결합
+                        for (const pageId of batch) {
+                            const page = result.results.find((p) => p.id === pageId);
+                            if (page) {
+                                const pageData = {
+                                    page,
+                                    blocks: batchBlocks[pageId] || [],
+                                };
+                                pagesToProcess.push(pageData);
+                            }
+                        }
                     }
                 }
             }
