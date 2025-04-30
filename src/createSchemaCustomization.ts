@@ -152,10 +152,6 @@ export const createSchemaCustomization: GatsbyNode[`createSchemaCustomization`] 
             url: String!
         }
 
-        type Fields {
-            childrenChurnotion: [${NODE_TYPE.Post}] @link(by: "id")
-        }
-
         type ${NODE_TYPE.Metadata} implements Node {
             id: ID!,
             title: String,

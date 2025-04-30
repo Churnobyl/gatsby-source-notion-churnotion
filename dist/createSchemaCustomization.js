@@ -149,10 +149,6 @@ const createSchemaCustomization = ({ actions, schema }) => {
             url: String!
         }
 
-        type Fields {
-            childrenChurnotion: [${constants_1.NODE_TYPE.Post}] @link(by: "id")
-        }
-
         type ${constants_1.NODE_TYPE.Metadata} implements Node {
             id: ID!,
             title: String,
