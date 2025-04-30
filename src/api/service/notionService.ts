@@ -2,6 +2,11 @@ import { fetchGetWithRetry, fetchPostWithRetry } from "../../util/fetchData";
 import { Reporter } from "gatsby";
 import { BaseContentBlock } from "notion-types";
 
+// Extended block type with has_children property
+interface NotionBlock extends BaseContentBlock {
+  has_children?: boolean;
+}
+
 export interface NotionServiceOptions {
   reporter: Reporter;
   parallelLimit?: number;
@@ -110,9 +115,9 @@ export class NotionService {
   }
 
   /**
-   * 페이지의 자식 블록 가져오기
+   * 페이지의 자식 블록 가져오기 (재귀적 처리)
    */
-  async getPageBlocks(pageId: string): Promise<BaseContentBlock[]> {
+  async getPageBlocks(pageId: string): Promise<NotionBlock[]> {
     const cacheKey = `page-blocks-${pageId}`;
 
     if (this.enableCaching && this.cache.has(cacheKey)) {
@@ -124,13 +129,16 @@ export class NotionService {
 
     try {
       const data = await fetchGetWithRetry(pageUrl);
-      const blocks = data.results;
+      const blocks = data.results as NotionBlock[];
+
+      // 재귀적으로 has_children이 true인 블록의 자식들을 가져옴
+      const blocksWithChildren = await this.fetchChildBlocks(blocks);
 
       if (this.enableCaching) {
-        this.cache.set(cacheKey, blocks);
+        this.cache.set(cacheKey, blocksWithChildren);
       }
 
-      return blocks;
+      return blocksWithChildren;
     } catch (error) {
       this.reporter.error(
         `[ERROR] Failed to get page blocks ${pageId}: ${error}`
@@ -140,11 +148,50 @@ export class NotionService {
   }
 
   /**
+   * has_children이 true인 블록들의 자식을 재귀적으로 가져옴
+   */
+  private async fetchChildBlocks(
+    blocks: NotionBlock[]
+  ): Promise<NotionBlock[]> {
+    if (!blocks || blocks.length === 0) return blocks;
+
+    const tasks = blocks.map(async (block) => {
+      if (block.has_children) {
+        try {
+          this.reporter.info(
+            `[NOTION] Fetching children for block ${block.id} of type ${block.type}`
+          );
+
+          const childBlocks = await this.getPageBlocks(block.id);
+
+          // 자식 블록을 부모 블록에 추가
+          (block as any).children = childBlocks;
+
+          // 특별히 table 타입의 경우 row 정보 추가
+          if (block.type === "table") {
+            (block as any).table.rows = childBlocks;
+          }
+
+          return block;
+        } catch (error) {
+          this.reporter.warn(
+            `[WARNING] Failed to fetch children for block ${block.id}: ${error}`
+          );
+          return block;
+        }
+      }
+      return block;
+    });
+
+    return Promise.all(tasks);
+  }
+
+  /**
    * 여러 페이지의 블록 병렬 처리
    */
   async getMultiplePagesBlocks(
     pageIds: string[]
-  ): Promise<{ [id: string]: BaseContentBlock[] }> {
+  ): Promise<{ [id: string]: NotionBlock[] }> {
     this.reporter.info(
       `[NOTION] Fetching blocks for ${pageIds.length} pages in parallel (limit: ${this.parallelLimit})`
     );
@@ -166,7 +213,7 @@ export class NotionService {
     const results = await Promise.all(tasks);
 
     return results.reduce(
-      (acc: { [id: string]: BaseContentBlock[] }, { pageId, blocks }) => {
+      (acc: { [id: string]: NotionBlock[] }, { pageId, blocks }) => {
         acc[pageId] = blocks;
         return acc;
       },
