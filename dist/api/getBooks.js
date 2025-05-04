@@ -6,17 +6,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getBooks = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const constants_1 = require("../constants");
-const fetchData_1 = require("../util/fetchData");
 const gatsby_source_filesystem_1 = require("gatsby-source-filesystem");
 const bookCategoryMap_1 = __importDefault(require("../util/bookCategoryMap"));
 const formatDate_1 = require("../util/formatDate");
+const service_1 = require("./service");
 const getBooks = async ({ bookDatabaseId, reporter, getCache, createNode, createNodeId, getNode, cache, }) => {
-    const databaseUrl = `databases/${bookDatabaseId}/query`;
+    // Initialize the TypeScript Notion Service for database queries
+    const notionService = new service_1.NotionService({
+        reporter,
+        parallelLimit: 5,
+        enableCaching: true,
+    });
     const cacheKey = `booksDatabase-${bookDatabaseId}`;
     let result = await cache.get(cacheKey);
     if (!result) {
         const body = {};
-        result = await (0, fetchData_1.fetchPostWithRetry)(databaseUrl, body);
+        result = await notionService.queryDatabase(bookDatabaseId, body);
         await cache.set(cacheKey, result);
     }
     if (result?.results?.length) {

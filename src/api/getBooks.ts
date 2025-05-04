@@ -1,10 +1,10 @@
 import crypto from "crypto";
 import { BOOK_URI, COMMON_URI, NODE_TYPE } from "../constants";
 import { IBook, IGetBooksParams } from "../types";
-import { fetchPostWithRetry } from "../util/fetchData";
 import { createRemoteFileNode } from "gatsby-source-filesystem";
 import bookCategoryMap from "../util/bookCategoryMap";
 import { useFormatDate } from "../util/formatDate";
+import { NotionService } from "./service";
 
 export const getBooks = async ({
   bookDatabaseId,
@@ -15,14 +15,19 @@ export const getBooks = async ({
   getNode,
   cache,
 }: IGetBooksParams) => {
-  const databaseUrl = `databases/${bookDatabaseId}/query`;
+  // Initialize the TypeScript Notion Service for database queries
+  const notionService = new NotionService({
+    reporter,
+    parallelLimit: 5,
+    enableCaching: true,
+  });
 
   const cacheKey = `booksDatabase-${bookDatabaseId}`;
   let result = await cache.get(cacheKey);
 
   if (!result) {
     const body = {};
-    result = await fetchPostWithRetry(databaseUrl, body);
+    result = await notionService.queryDatabase(bookDatabaseId, body);
     await cache.set(cacheKey, result);
   }
 

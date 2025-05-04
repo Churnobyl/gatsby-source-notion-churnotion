@@ -1,7 +1,7 @@
 {
   "name": "gatsby-source-notion-churnotion",
   "description": "Gatsby plugin that can connect with One Notion Database RECURSIVELY using official API",
-  "version": "1.1.40",
+  "version": "1.2.0",
   "skipLibCheck": true,
   "license": "0BSD",
   "main": "./dist/gatsby-node.js",
@@ -11,7 +11,8 @@
   ],
   "scripts": {
     "clean": "del-cli dist",
-    "build": "tsc",
+    "build": "npm run build:rust && tsc",
+    "build:rust": "cd rust/notion-parallel && (cargo build --release || echo 'Rust build failed, using TypeScript fallback') && cd ../..",
     "develop": "tsc --watch",
     "test": "jest",
     "prepare": "npm run clean && npm run build"
@@ -54,6 +55,7 @@
     "typescript": "^5.7.2"
   },
   "devDependencies": {
+    "@netlify/plugin-cachedir": "^1.0.0",
     "@types/node-fetch": "^2.6.12",
     "gatsby": "^5.14.0"
   },

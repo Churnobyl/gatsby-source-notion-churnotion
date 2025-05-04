@@ -9,17 +9,32 @@ const constants_1 = require("../constants");
 const processor_1 = require("../util/processor");
 const slugify_1 = require("../util/slugify");
 const formatDate_1 = require("../util/formatDate");
+const rust_bindings_1 = require("../rust-bindings");
 const service_1 = require("./service");
 const timeLimit_1 = require("../util/timeLimit");
 // 최대 동시 요청 수 설정
-const MAX_CONCURRENT_REQUESTS = 5;
+const MAX_CONCURRENT_REQUESTS = 10;
 const getPages = async ({ databaseId, reporter, getCache, actions, createNode, createNodeId, createParentChildLink, getNode, cache, }) => {
-    // Notion Service 초기화
+    // Get the Notion API key from environment variables
+    const notionApiKey = process.env.NOTION_API_KEY;
+    if (!notionApiKey) {
+        reporter.error("[ERROR] NOTION_API_KEY environment variable is not set!");
+        throw new Error("NOTION_API_KEY environment variable is required");
+    }
+    // Initialize the TypeScript Notion Service for methods not implemented in Rust
     const notionService = new service_1.NotionService({
         reporter,
         parallelLimit: MAX_CONCURRENT_REQUESTS,
         enableCaching: true,
     });
+    // Initialize Rust-based Notion Service
+    const rustNotionService = new rust_bindings_1.RustNotionService({
+        reporter,
+        notionApiKey,
+        parallelLimit: MAX_CONCURRENT_REQUESTS,
+        enableCaching: true,
+    });
+    reporter.info(`[INIT] Initialized Rust-based Notion service with parallel limit: ${MAX_CONCURRENT_REQUESTS}`);
     // 태그 매핑을 위한 객체
     const tagMap = {};
     /**
@@ -33,7 +48,7 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
             // 동시에 처리될 페이지 목록
             const pagesToProcess = [];
             while (hasMore) {
-                // 데이터베이스 쿼리
+                // 데이터베이스 쿼리 (still use the TypeScript implementation for this)
                 const result = await notionService.queryDatabase(databaseId);
                 hasMore = false; // Notion API가 페이지네이션을 완전히 지원하지 않으므로 일단 한 번만 처리
                 if (result?.results?.length) {
@@ -44,7 +59,8 @@ const getPages = async ({ databaseId, reporter, getCache, actions, createNode, c
                     for (let i = 0; i < pageIds.length; i += 20) {
                         const batch = pageIds.slice(i, i + 20);
                         reporter.info(`[BATCH] Processing pages ${i + 1} to ${i + batch.length} of ${pageIds.length}`);
-                        const batchBlocks = await notionService.getMultiplePagesBlocks(batch);
+                        // Use the Rust implementation for parallel fetching
+                        const batchBlocks = await rustNotionService.getMultiplePagesBlocks(batch);
                         // 페이지 데이터와 블록 결합
                         for (const pageId of batch) {
                             const page = result.results.find((p) => p.id === pageId);

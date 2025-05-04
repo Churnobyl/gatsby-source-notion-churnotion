@@ -1,0 +1,34 @@
+[build]
+  command = "chmod +x netlify-build.sh && ./netlify-build.sh"
+  publish = "public"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Cache Rust dependencies for faster builds
+[[plugins]]
+  package = "@netlify/plugin-cachedir"
+
+  [plugins.inputs]
+    paths = [
+      "rust/notion-parallel/target",
+      "$HOME/.cargo"
+    ]
+
+# Optional: For better performance
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = false
+  minify = false
+
+[build.processing.js]
+  bundle = false
+  minify = false
+
+[build.processing.html]
+  pretty_urls = true
+
+[build.processing.images]
+  compress = false 

@@ -11,11 +11,12 @@ import { processor } from "../util/processor";
 import { slugify } from "../util/slugify";
 import bookCategoryMap from "../util/bookCategoryMap";
 import { useFormatDate } from "../util/formatDate";
+import { RustNotionService } from "../rust-bindings";
 import { NotionService } from "./service";
 import { timeLimit } from "../util/timeLimit";
 
 // 최대 동시 요청 수 설정
-const MAX_CONCURRENT_REQUESTS = 5;
+const MAX_CONCURRENT_REQUESTS = 10;
 
 export const getPages = async ({
   databaseId,
@@ -28,12 +29,32 @@ export const getPages = async ({
   getNode,
   cache,
 }: IGetPagesParams) => {
-  // Notion Service 초기화
+  // Get the Notion API key from environment variables
+  const notionApiKey = process.env.NOTION_API_KEY;
+
+  if (!notionApiKey) {
+    reporter.error("[ERROR] NOTION_API_KEY environment variable is not set!");
+    throw new Error("NOTION_API_KEY environment variable is required");
+  }
+
+  // Initialize the TypeScript Notion Service for methods not implemented in Rust
   const notionService = new NotionService({
     reporter,
     parallelLimit: MAX_CONCURRENT_REQUESTS,
     enableCaching: true,
   });
+
+  // Initialize Rust-based Notion Service
+  const rustNotionService = new RustNotionService({
+    reporter,
+    notionApiKey,
+    parallelLimit: MAX_CONCURRENT_REQUESTS,
+    enableCaching: true,
+  });
+
+  reporter.info(
+    `[INIT] Initialized Rust-based Notion service with parallel limit: ${MAX_CONCURRENT_REQUESTS}`
+  );
 
   // 태그 매핑을 위한 객체
   const tagMap: Record<string, string> = {};
@@ -55,7 +76,7 @@ export const getPages = async ({
       const pagesToProcess: any[] = [];
 
       while (hasMore) {
-        // 데이터베이스 쿼리
+        // 데이터베이스 쿼리 (still use the TypeScript implementation for this)
         const result = await notionService.queryDatabase(databaseId);
         hasMore = false; // Notion API가 페이지네이션을 완전히 지원하지 않으므로 일단 한 번만 처리
 
@@ -75,7 +96,9 @@ export const getPages = async ({
                 pageIds.length
               }`
             );
-            const batchBlocks = await notionService.getMultiplePagesBlocks(
+
+            // Use the Rust implementation for parallel fetching
+            const batchBlocks = await rustNotionService.getMultiplePagesBlocks(
               batch
             );
 

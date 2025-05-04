@@ -1,6 +1,8 @@
-import { fetchGetWithRetry, fetchPostWithRetry } from "../../util/fetchData";
 import { Reporter } from "gatsby";
 import { BaseContentBlock } from "notion-types";
+import { instance } from "../connector";
+import { NOTION_LIMIT_ERROR, PLUGIN_NAME } from "../../constants";
+import { sleep } from "../../util/timeLimit";
 
 // Extended block type with has_children property
 interface NotionBlock extends BaseContentBlock {
@@ -79,6 +81,145 @@ export class NotionService {
   }
 
   /**
+   * GET 요청을 수행하는 함수 (재시도 로직 포함)
+   */
+  private async fetchGetWithRetry(
+    url: string,
+    tryCount = 0,
+    maxRetries = 5
+  ): Promise<any> {
+    try {
+      const response = await instance.get(url);
+      let results = response.data.results;
+
+      // Notion API 응답에 has_more가 있으면 추가 블록을 가져와 병합
+      if (response.data.has_more) {
+        const pageId = url.match(/blocks\/([^\/]*)\/children/)?.[1]; // 정확한 pageId 추출
+        if (pageId) {
+          const additionalResults = await this.fetchAllBlocks(
+            pageId,
+            response.data.next_cursor
+          );
+          results = [...results, ...additionalResults]; // 기존 results에 추가 데이터 병합
+        } else {
+          this.reporter.warn(
+            `[WARNING] Failed to extract pageId from URL: ${url}`
+          );
+        }
+      }
+
+      return { ...response.data, results }; // 병합된 전체 데이터 반환
+    } catch (error: any) {
+      const status = error.response?.status;
+      const message = error.response?.data?.message || `Unknown error`;
+
+      // Rate limit 오류 처리 (Exponential Backoff)
+      if (status === NOTION_LIMIT_ERROR && tryCount < maxRetries) {
+        const delay = Math.pow(2, tryCount) * 1000;
+        this.reporter.info(
+          `[${PLUGIN_NAME}] Rate limit hit. Retrying in ${delay / 1000}s...`
+        );
+        await sleep(delay);
+        return this.fetchGetWithRetry(url, tryCount + 1, maxRetries);
+      }
+
+      // 기타 예외 처리 (Exponential Backoff)
+      if (tryCount < maxRetries) {
+        const delay = Math.pow(2, tryCount) * 1000;
+        this.reporter.info(
+          `[${PLUGIN_NAME}] Unexpected error. Retrying in ${delay / 1000}s...`
+        );
+        await sleep(delay);
+        return this.fetchGetWithRetry(url, tryCount + 1, maxRetries);
+      }
+
+      // 최대 재시도 초과 시 오류 출력 후 throw
+      this.reporter.error(
+        `[${PLUGIN_NAME}] Failed after ${tryCount} retries:`,
+        message
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * POST 요청을 수행하는 함수 (재시도 로직 포함)
+   */
+  private async fetchPostWithRetry(
+    url: string,
+    body: any,
+    tryCount = 0,
+    maxRetries = 5
+  ): Promise<any> {
+    try {
+      const response = await instance.post(url, body);
+      return response.data;
+    } catch (error: any) {
+      const status = error.response?.status;
+      const message = error.response?.data?.message || `Unknown error`;
+
+      // Rate limit 오류 처리 (Exponential Backoff)
+      if (status === NOTION_LIMIT_ERROR && tryCount < maxRetries) {
+        const delay = Math.pow(2, tryCount) * 1000;
+        this.reporter.info(
+          `[${PLUGIN_NAME}] Rate limit hit. Retrying in ${delay / 1000}s...`
+        );
+        await sleep(delay);
+        return this.fetchPostWithRetry(url, body, tryCount + 1, maxRetries);
+      }
+
+      // 기타 예외 처리 (Exponential Backoff)
+      if (tryCount < maxRetries) {
+        const delay = Math.pow(2, tryCount) * 1000;
+        this.reporter.info(
+          `[${PLUGIN_NAME}] Unexpected error. Retrying in ${delay / 1000}s...`
+        );
+        await sleep(delay);
+        return this.fetchPostWithRetry(url, body, tryCount + 1, maxRetries);
+      }
+
+      // 최대 재시도 초과 시 오류 출력 후 throw
+      this.reporter.error(
+        `[${PLUGIN_NAME}] Failed after ${tryCount} retries:`,
+        message
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 모든 블록 데이터를 가져오는 함수 (next_cursor 지원)
+   */
+  private async fetchAllBlocks(
+    pageId: string,
+    startCursor: string | null = null
+  ): Promise<any[]> {
+    let hasMore = true;
+    let nextCursor: string | null = startCursor;
+    let allResults: any[] = [];
+
+    while (hasMore) {
+      const pageUrl = `blocks/${pageId}/children?page_size=100${
+        nextCursor ? `&start_cursor=${nextCursor}` : ""
+      }`;
+
+      const result = await this.fetchGetWithRetry(pageUrl);
+
+      if (result?.results?.length) {
+        allResults = [...allResults, ...result.results];
+      }
+      hasMore = result.has_more || false;
+      nextCursor = result.next_cursor || null;
+
+      if (!nextCursor) {
+        hasMore = false;
+      }
+    }
+
+    return allResults;
+  }
+
+  /**
    * 데이터베이스 쿼리
    */
   async queryDatabase(databaseId: string, body: any = {}): Promise<any> {
@@ -94,7 +235,7 @@ export class NotionService {
     const databaseUrl = `databases/${databaseId}/query`;
 
     try {
-      const result = await fetchPostWithRetry(databaseUrl, body);
+      const result = await this.fetchPostWithRetry(databaseUrl, body);
 
       if (this.enableCaching) {
         this.cache.set(cacheKey, result);
@@ -128,7 +269,7 @@ export class NotionService {
     const pageUrl = `blocks/${pageId}/children?page_size=100`;
 
     try {
-      const data = await fetchGetWithRetry(pageUrl);
+      const data = await this.fetchGetWithRetry(pageUrl);
       const blocks = data.results as NotionBlock[];
 
       // 재귀적으로 has_children이 true인 블록의 자식들을 가져옴
